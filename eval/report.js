@@ -1,84 +1,138 @@
-const fs = require('fs');
-const path = require('path');
+import { readFileSync } from "fs";
+import { resolve, dirname } from "path";
+import { fileURLToPath } from "url";
 
-const SCORED_FILE = path.join(__dirname, 'results', 'scored.json');
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const SCORED_PATH = resolve(__dirname, "results", "scored.json");
 
-function report() {
-  if (!fs.existsSync(SCORED_FILE)) {
-    console.error('No scored.json found! Run eval:judge first.');
-    return;
+function main() {
+  console.log("=== Roastd Evaluation Report ===\n");
+
+  const data = JSON.parse(readFileSync(SCORED_PATH, "utf-8"));
+  const results = data.scoredResults.filter((r) => r.status === "scored" && r.scores);
+  const errors = data.scoredResults.filter((r) => r.status === "judge_error");
+
+  if (results.length === 0) {
+    console.log("No scored results found. Run judge.js first.");
+    process.exit(1);
   }
 
-  const results = JSON.parse(fs.readFileSync(SCORED_FILE, 'utf-8'));
-  
-  let passedAll = 0;
-  let tipSum = 0;
-  let rewriteSum = 0;
-  
-  const categoryStats = {};
-  const intensityStats = {};
-
-  const failures = [];
-
-  results.forEach(item => {
-    const s = item.score;
-    const isPass = s.category_accuracy === 'pass' && 
-                   s.intensity_calibration === 'pass' && 
-                   s.structural_validity === 'pass';
-                   
-    if (isPass) passedAll++;
-    
-    tipSum += s.tip_relevance;
-    rewriteSum += s.rewrite_quality;
-
-    if (!item.input) return; // defensive
-
-    const cat = item.input.category;
-    const int = item.input.intensity;
-    
-    if (!categoryStats[cat]) categoryStats[cat] = { total: 0, pass: 0 };
-    if (!intensityStats[int]) intensityStats[int] = { total: 0, pass: 0 };
-
-    categoryStats[cat].total++;
-    intensityStats[int].total++;
-    
-    if (isPass) {
-      categoryStats[cat].pass++;
-      intensityStats[int].pass++;
-    } else {
-      let reasons = [];
-      if (s.category_accuracy !== 'pass') reasons.push(`Cat: ${s.category_accuracy_reason}`);
-      if (s.intensity_calibration !== 'pass') reasons.push(`Int: ${s.intensity_calibration_reason}`);
-      if (s.structural_validity !== 'pass') reasons.push(`Struct: ${s.structural_validity_reason}`);
-      failures.push({ id: item.testId, reasons });
-    }
-  });
-
-  const total = results.length;
-  console.log(`\n=== ROASTD EVAL REPORT ===\n`);
-  console.log(`Overall Pass Rate: ${((passedAll / total) * 100).toFixed(1)}% (${passedAll}/${total})`);
-  console.log(`Average Tip Relevance: ${(tipSum / total).toFixed(2)}/5`);
-  console.log(`Average Rewrite Quality: ${(rewriteSum / total).toFixed(2)}/5`);
-  
-  console.log(`\n-- Category Pass Rates --`);
-  for (const [cat, stat] of Object.entries(categoryStats)) {
-    console.log(`${cat}: ${((stat.pass / stat.total) * 100).toFixed(0)}%`);
+  console.log(`Judged at: ${data.judgedAt}`);
+  console.log(`Total scored: ${results.length}`);
+  if (errors.length > 0) {
+    console.log(`Judge errors: ${errors.length}`);
   }
 
-  console.log(`\n-- Intensity Pass Rates --`);
-  for (const [int, stat] of Object.entries(intensityStats)) {
-    console.log(`${int}: ${((stat.pass / stat.total) * 100).toFixed(0)}%`);
+  // Overall pass/fail counts
+  const categoryPass = results.filter((r) => r.scores.category_accuracy === "pass").length;
+  const intensityPass = results.filter((r) => r.scores.intensity_calibration === "pass").length;
+  const structurePass = results.filter((r) => r.scores.structural_validity === "pass").length;
+  const allThreePass = results.filter(
+    (r) =>
+      r.scores.category_accuracy === "pass" &&
+      r.scores.intensity_calibration === "pass" &&
+      r.scores.structural_validity === "pass"
+  ).length;
+
+  const avgTipRelevance = (
+    results.reduce((sum, r) => sum + (r.scores.tip_relevance || 0), 0) / results.length
+  ).toFixed(2);
+  const avgRewriteQuality = (
+    results.reduce((sum, r) => sum + (r.scores.rewrite_quality || 0), 0) / results.length
+  ).toFixed(2);
+
+  console.log("\n--- Overall Pass Rates ---");
+  console.log(`Category Accuracy:     ${categoryPass}/${results.length} (${pct(categoryPass, results.length)})`);
+  console.log(`Intensity Calibration: ${intensityPass}/${results.length} (${pct(intensityPass, results.length)})`);
+  console.log(`Structural Validity:   ${structurePass}/${results.length} (${pct(structurePass, results.length)})`);
+  console.log(`All 3 Passing:         ${allThreePass}/${results.length} (${pct(allThreePass, results.length)})`);
+
+  console.log("\n--- Quality Scores (avg) ---");
+  console.log(`Tip Relevance:   ${avgTipRelevance}/5`);
+  console.log(`Rewrite Quality: ${avgRewriteQuality}/5`);
+
+  // Per-category breakdown
+  const categories = ["cv", "dating", "pitch", "bio"];
+  console.log("\n--- Per-Category Breakdown ---");
+  for (const cat of categories) {
+    const catResults = results.filter((r) => r.category === cat);
+    if (catResults.length === 0) continue;
+
+    const catPass = catResults.filter((r) => r.scores.category_accuracy === "pass").length;
+    const intPass = catResults.filter((r) => r.scores.intensity_calibration === "pass").length;
+    const strPass = catResults.filter((r) => r.scores.structural_validity === "pass").length;
+    const tipAvg = (
+      catResults.reduce((s, r) => s + (r.scores.tip_relevance || 0), 0) / catResults.length
+    ).toFixed(1);
+    const rewAvg = (
+      catResults.reduce((s, r) => s + (r.scores.rewrite_quality || 0), 0) / catResults.length
+    ).toFixed(1);
+
+    console.log(
+      `\n  ${cat.toUpperCase()} (${catResults.length} tests): Cat:${catPass}/${catResults.length} Int:${intPass}/${catResults.length} Str:${strPass}/${catResults.length} | Tips:${tipAvg}/5 Rewrite:${rewAvg}/5`
+    );
   }
+
+  // Per-intensity breakdown
+  const intensities = ["mild", "medium", "savage"];
+  console.log("\n--- Per-Intensity Breakdown ---");
+  for (const level of intensities) {
+    const intResults = results.filter((r) => r.intensity === level);
+    if (intResults.length === 0) continue;
+
+    const catPass = intResults.filter((r) => r.scores.category_accuracy === "pass").length;
+    const intPass = intResults.filter((r) => r.scores.intensity_calibration === "pass").length;
+    const strPass = intResults.filter((r) => r.scores.structural_validity === "pass").length;
+    const tipAvg = (
+      intResults.reduce((s, r) => s + (r.scores.tip_relevance || 0), 0) / intResults.length
+    ).toFixed(1);
+    const rewAvg = (
+      intResults.reduce((s, r) => s + (r.scores.rewrite_quality || 0), 0) / intResults.length
+    ).toFixed(1);
+
+    console.log(
+      `  ${level.toUpperCase()} (${intResults.length} tests): Cat:${catPass}/${intResults.length} Int:${intPass}/${intResults.length} Str:${strPass}/${intResults.length} | Tips:${tipAvg}/5 Rewrite:${rewAvg}/5`
+    );
+  }
+
+  // Failure details
+  const failures = results.filter(
+    (r) =>
+      r.scores.category_accuracy === "fail" ||
+      r.scores.intensity_calibration === "fail" ||
+      r.scores.structural_validity === "fail"
+  );
 
   if (failures.length > 0) {
-    console.log(`\n-- Failures --`);
-    failures.forEach(f => {
-      console.log(`\n[${f.id}]`);
-      f.reasons.forEach(r => console.log(`  - ${r}`));
-    });
+    console.log("\n--- Failure Details ---");
+    for (const f of failures) {
+      const failedCriteria = [];
+      if (f.scores.category_accuracy === "fail") failedCriteria.push("category");
+      if (f.scores.intensity_calibration === "fail") failedCriteria.push("intensity");
+      if (f.scores.structural_validity === "fail") failedCriteria.push("structure");
+
+      console.log(`  ${f.id}: FAILED [${failedCriteria.join(", ")}]`);
+      if (f.reasoning) {
+        console.log(`    Reason: ${f.reasoning}`);
+      }
+    }
   } else {
-    console.log(`\nAll tests passed successfully!`);
+    console.log("\n--- No failures. All pass/fail criteria passed. ---");
   }
+
+  // Judge errors
+  if (errors.length > 0) {
+    console.log("\n--- Judge Errors ---");
+    for (const e of errors) {
+      console.log(`  ${e.id}: ${e.reasoning}`);
+    }
+  }
+
+  console.log("\n=== End Report ===");
 }
 
-report();
+function pct(n, total) {
+  return `${((n / total) * 100).toFixed(0)}%`;
+}
+
+main();
