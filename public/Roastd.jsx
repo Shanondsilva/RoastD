@@ -48,7 +48,7 @@ function Roastd() {
   const [targetGoal, setTargetGoal] = useState('');
   const [intensity, setIntensity] = useState('hard');
   const [text, setText] = useState('');
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [stats, setStats] = useState(null);
@@ -106,7 +106,7 @@ function Roastd() {
       intensity: reqIntensity,
       timestamp: new Date().toISOString()
     };
-    
+
     setRecentRoasts(prev => {
       const updated = [roastData, ...prev].slice(0, 3);
       localStorage.setItem('recentRoasts', JSON.stringify(updated));
@@ -118,7 +118,7 @@ function Roastd() {
 
   const handleSubmit = async () => {
     if (!text.trim()) return;
-    
+
     setIsLoading(true);
     setError(null);
     setResult(null);
@@ -129,11 +129,11 @@ function Roastd() {
       const response = await fetch('/api/roast', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          text: text.trim(), 
-          category, 
-          targetGoal: targetGoal.trim() || 'Improve my text', 
-          intensity 
+        body: JSON.stringify({
+          text: text.trim(),
+          category,
+          targetGoal: targetGoal.trim() || 'Improve my text',
+          intensity
         }),
       });
 
@@ -150,7 +150,7 @@ function Roastd() {
         retries: response.headers.get('X-Retry-Count') || '0',
       });
       saveToRecent(data, category, intensity);
-      
+
       setTimeout(() => {
         if (resultsRef.current) {
           resultsRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -244,7 +244,7 @@ function Roastd() {
       doc.setFontSize(11);
       doc.setFont('helvetica', 'normal');
       const splitRewrite = doc.splitTextToSize(result.rewrite, 180);
-      
+
       splitRewrite.forEach(line => {
         if (yPos > 280) { doc.addPage(); yPos = 20; }
         doc.text(line, 15, yPos);
@@ -260,21 +260,25 @@ function Roastd() {
   const handleDownloadDOCX = async () => {
     if (!result) return;
     try {
-      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/docx/8.2.2/docx.min.js');
+      await loadScript('https://unpkg.com/docx@8.5.0/build/index.umd.js');
       await loadScript('https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js');
-      
+
       const { Document, Packer, Paragraph, TextRun, HeadingLevel } = window.docx;
+
+      if (!Document || !Packer) {
+        throw new Error('DOCX library failed to load properly');
+      }
 
       const children = [
         new Paragraph({ text: "Roastd Results", heading: HeadingLevel.HEADING_1 }),
         new Paragraph({ text: `Category: ${category} | Intensity: ${intensity} | Date: ${new Date().toLocaleDateString()}` }),
         new Paragraph({ text: "" }),
-        
+
         new Paragraph({ text: "The Roast", heading: HeadingLevel.HEADING_2 }),
         new Paragraph({ children: [new TextRun({ text: `"${result.roast_quote}"`, italics: true })] }),
         new Paragraph({ children: [new TextRun({ text: `Heat Score: ${result.heat_score}/10`, bold: true })] }),
         new Paragraph({ text: "" }),
-        
+
         new Paragraph({ text: "Perspectives", heading: HeadingLevel.HEADING_2 }),
       ];
 
@@ -291,25 +295,18 @@ function Roastd() {
       children.push(new Paragraph({ text: "" }));
 
       children.push(new Paragraph({ text: "Your Improved Version", heading: HeadingLevel.HEADING_2 }));
-      const rewriteLines = result.rewrite.split('\\n');
-      rewriteLines.forEach(line => {
-        if (line.trim()) {
-           children.push(new Paragraph({ text: line }));
-        } else {
-           children.push(new Paragraph({ text: "" }));
-        }
+      result.rewrite.split('\n').forEach(line => {
+        children.push(new Paragraph({ text: line }));
       });
 
       const doc = new Document({
-        sections: [{
-          properties: {},
-          children: children
-        }]
+        sections: [{ properties: {}, children }]
       });
 
       const blob = await Packer.toBlob(doc);
       window.saveAs(blob, `roastd-${category.replace(/[^a-z0-9]/gi, '_').toLowerCase()}-${Date.now()}.docx`);
     } catch (e) {
+      console.error('DOCX error:', e);
       alert('Failed to generate DOCX: ' + e.message);
     }
   };
@@ -424,7 +421,7 @@ function Roastd() {
             <span>Intensity: {sharedRoast.intensity}</span>
             <span style={{ color: COLORS.accentRed }}>Heat Score: {sharedRoast.heat_score}/10</span>
           </div>
-          <button 
+          <button
             style={{ ...buttonStyle, backgroundColor: COLORS.bgDeep, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}`, marginTop: '16px', width: 'auto', padding: '8px 16px', fontSize: '14px' }}
             onClick={() => {
               setSharedRoast(null);
@@ -440,9 +437,9 @@ function Roastd() {
       <section style={cardStyle}>
         <div style={{ marginBottom: '20px' }}>
           <label style={labelStyle}>1. Document Type</label>
-          <select 
-            style={inputStyle} 
-            value={category} 
+          <select
+            style={inputStyle}
+            value={category}
             onChange={e => setCategory(e.target.value)}
           >
             {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.id}</option>)}
@@ -451,7 +448,7 @@ function Roastd() {
 
         <div style={{ marginBottom: '20px' }}>
           <label style={labelStyle}>2. Target Goal (Optional)</label>
-          <input 
+          <input
             style={inputStyle}
             type="text"
             placeholder={currentCategoryObj.placeholder}
@@ -488,7 +485,7 @@ function Roastd() {
 
         <div style={{ marginBottom: '16px' }}>
           <label style={labelStyle}>4. The Victim (Paste Text)</label>
-          <textarea 
+          <textarea
             style={{ ...inputStyle, minHeight: '160px', resize: 'vertical' }}
             placeholder="Paste your text here..."
             value={text}
@@ -496,9 +493,9 @@ function Roastd() {
           />
         </div>
 
-        <button 
-          style={buttonStyle} 
-          onClick={handleSubmit} 
+        <button
+          style={buttonStyle}
+          onClick={handleSubmit}
           className={isLoading ? 'pulse' : ''}
         >
           {isLoading ? 'Roasting...' : 'Roast Me'}
@@ -511,11 +508,11 @@ function Roastd() {
           <h3 style={{ fontSize: '14px', textTransform: 'uppercase', color: COLORS.textSecondary, marginBottom: '16px' }}>Recent Roasts</h3>
           <div style={{ display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '8px' }}>
             {recentRoasts.map((r, idx) => (
-              <div key={idx} style={{ 
-                minWidth: '240px', 
-                backgroundColor: COLORS.bgCard, 
-                borderRadius: '8px', 
-                padding: '16px', 
+              <div key={idx} style={{
+                minWidth: '240px',
+                backgroundColor: COLORS.bgCard,
+                borderRadius: '8px',
+                padding: '16px',
                 borderLeft: `4px solid ${COLORS.accentRedSoft}`,
                 flexShrink: 0
               }}>
@@ -539,7 +536,7 @@ function Roastd() {
         <div className="fade-in" style={{ ...cardStyle, borderLeft: `4px solid ${COLORS.error}` }}>
           <h3 style={{ margin: '0 0 8px 0', color: COLORS.error }}>Something went wrong</h3>
           <p style={{ margin: '0 0 16px 0' }}>{error}</p>
-          <button 
+          <button
             style={{ ...buttonStyle, backgroundColor: COLORS.bgDeep, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}`, marginTop: 0, padding: '12px' }}
             onClick={handleSubmit}
           >
@@ -604,25 +601,25 @@ function Roastd() {
 
           {/* Actions */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '32px' }}>
-            <button 
+            <button
               style={{ ...buttonStyle, marginTop: 0, backgroundColor: COLORS.bgCard, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}` }}
               onClick={handleDownloadPDF}
             >
               Download PDF
             </button>
-            <button 
+            <button
               style={{ ...buttonStyle, marginTop: 0, backgroundColor: COLORS.bgCard, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}` }}
               onClick={handleDownloadDOCX}
             >
               Download DOCX
             </button>
-            <button 
+            <button
               style={{ ...buttonStyle, marginTop: 0, backgroundColor: COLORS.bgCard, color: COLORS.accentBlue, border: `1px solid ${COLORS.accentBlue}` }}
               onClick={handleShare}
             >
               Share Roast
             </button>
-            <button 
+            <button
               style={{ ...buttonStyle, marginTop: 0, backgroundColor: COLORS.accentYellow, color: COLORS.bgDeep }}
               onClick={reset}
             >
@@ -633,13 +630,13 @@ function Roastd() {
           {/* Stats */}
           {stats && (
             <div style={{ marginTop: '32px', textAlign: 'center' }}>
-              <button 
+              <button
                 onClick={() => setShowStats(!showStats)}
                 style={{ background: 'none', border: 'none', color: COLORS.textSecondary, textDecoration: 'underline', cursor: 'pointer', fontSize: '14px' }}
               >
                 {showStats ? 'Hide API Stats' : 'Show API Stats'}
               </button>
-              
+
               {showStats && (
                 <div className="fade-in" style={{ display: 'flex', justifyContent: 'center', gap: '24px', marginTop: '16px', fontSize: '12px', color: COLORS.textSecondary }}>
                   <div>Tokens: <span style={{ color: COLORS.textPrimary }}>{stats.tokens}</span></div>
@@ -649,9 +646,11 @@ function Roastd() {
               )}
             </div>
           )}
+
         </section>
       )}
     </div>
   );
 }
 
+export default Roastd;
