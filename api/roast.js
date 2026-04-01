@@ -210,7 +210,8 @@ export default async function handler(req) {
             contents: [{ parts: [{ text }] }],
             generationConfig: {
               maxOutputTokens: 4096,
-              responseMimeType: "application/json"
+              responseMimeType: "application/json",
+              thinkingConfig: { thinkingBudget: 0 }
             }
           })
         });
