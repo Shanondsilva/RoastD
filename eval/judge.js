@@ -1,122 +1,206 @@
-require('dotenv').config({ path: '.env.local' });
-const fs = require('fs');
-const path = require('path');
+import { readFileSync, writeFileSync } from "fs";
+import { resolve, dirname } from "path";
+import { fileURLToPath } from "url";
+import { config } from "dotenv";
 
-const RESPONSES_FILE = path.join(__dirname, 'results', 'responses.json');
-const SCORED_FILE = path.join(__dirname, 'results', 'scored.json');
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
-async function judge() {
-  const responses = JSON.parse(fs.readFileSync(RESPONSES_FILE, 'utf-8'));
-  const scored = [];
+config({ path: resolve(__dirname, "..", ".env.local") });
 
-  for (const item of responses) {
-    process.stdout.write(`Judging ${item.testId}... `);
+const API_KEY = process.env.GOOGLE_API_KEY;
+if (!API_KEY) {
+  console.error("Missing GOOGLE_API_KEY in .env.local");
+  process.exit(1);
+}
 
-    if (!item.response) {
-      console.log('FAIL (No response to judge)');
-      scored.push({
-        testId: item.testId,
-        score: {
-          category_accuracy: "fail",
-          category_accuracy_reason: "No response",
-          intensity_calibration: "fail",
-          intensity_calibration_reason: "No response",
-          structural_validity: "fail",
-          structural_validity_reason: "No response",
-          tip_relevance: 1,
-          tip_relevance_reason: "No response",
-          rewrite_quality: 1,
-          rewrite_quality_reason: "No response"
-        },
-        input: item.input,
-        response: null
-      });
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
+const RESPONSES_PATH = resolve(__dirname, "results", "responses.json");
+const GOLDEN_TESTS_PATH = resolve(__dirname, "golden-tests.json");
+const SCORED_PATH = resolve(__dirname, "results", "scored.json");
+const DELAY_MS = 3000;
+
+function buildJudgePrompt(test, response) {
+  return `You are an expert evaluator for an AI-powered "document roasting" app called Roastd.
+
+A user submitted a ${test.category} document with intensity set to "${test.intensity}" and a target goal of: "${test.targetGoal}"
+
+Here is the original user text:
+---
+${test.text}
+---
+
+Here is the AI-generated roast response:
+---
+Roast Quote: ${response.roast_quote}
+Heat Score: ${response.heat_score}/10
+Perspective 1 (${response.multi_perspective[0]?.title}): ${response.multi_perspective[0]?.content}
+Perspective 2 (${response.multi_perspective[1]?.title}): ${response.multi_perspective[1]?.content}
+Perspective 3 (${response.multi_perspective[2]?.title}): ${response.multi_perspective[2]?.content}
+Tips: ${response.tips?.map((t, i) => `${i + 1}. ${t}`).join(" | ")}
+Rewrite: ${response.rewrite}
+---
+
+Score this response on the following 5 criteria. Respond ONLY with a JSON object, no markdown, no backticks, no extra text.
+
+{
+  "category_accuracy": "pass" or "fail" - Does the roast clearly address this as a ${test.category} document? Are the perspectives appropriate for the ${test.category} category? Are the tips relevant to improving a ${test.category}?
+
+  "intensity_calibration": "pass" or "fail" - The intensity was set to "${test.intensity}". Mild should be constructive with light humor. Medium should be pointed and direct with sharper criticism. Savage should be brutally honest, pulling no punches. Does the tone match the requested intensity?
+
+  "structural_validity": "pass" or "fail" - Does the response have: a roast quote, a heat score between 1-10, exactly 3 perspectives each with title and content, exactly 5 tips, and a rewrite? Are all fields non-empty and substantive?
+
+  "tip_relevance": integer 1-5 - How actionable and specific are the 5 tips? 1 = generic filler that could apply to anything. 3 = decent advice but somewhat obvious. 5 = highly specific, actionable advice tailored to this exact document and the user's target goal of "${test.targetGoal}".
+
+  "rewrite_quality": integer 1-5 - How good is the rewrite? 1 = barely different from original or nonsensical. 3 = improved but generic. 5 = dramatically better, specifically tailored to the target goal, maintains the user's voice while fixing all major issues.
+
+  "reasoning": A brief 2-3 sentence explanation of your scoring decisions.
+}`;
+}
+
+async function judgeResponse(test, response) {
+  const prompt = buildJudgePrompt(test, response);
+
+  const res = await fetch(GEMINI_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      systemInstruction: {
+        parts: [
+          {
+            text: "You are a strict, objective evaluator. Return only valid JSON. No markdown. No backticks. No preamble.",
+          },
+        ],
+      },
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        maxOutputTokens: 1024,
+        responseMimeType: "application/json",
+        thinkingConfig: { thinkingBudget: 0 },
+      },
+    }),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Gemini API error ${res.status}: ${errText.slice(0, 300)}`);
+  }
+
+  const data = await res.json();
+  const raw =
+    data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+  const cleaned = raw
+    .replace(/```json/g, "")
+    .replace(/```/g, "")
+    .trim();
+
+  return JSON.parse(cleaned);
+}
+
+async function main() {
+  console.log("=== Roastd LLM Judge ===\n");
+
+  const responsesFile = JSON.parse(readFileSync(RESPONSES_PATH, "utf-8"));
+  const goldenTests = JSON.parse(readFileSync(GOLDEN_TESTS_PATH, "utf-8"));
+
+  const testMap = {};
+  goldenTests.forEach((t) => (testMap[t.id] = t));
+
+  const passedResults = responsesFile.results.filter(
+    (r) => r.status === "pass" && r.data
+  );
+
+  console.log(
+    `Found ${passedResults.length} valid responses to judge (out of ${responsesFile.results.length} total)\n`
+  );
+
+  if (passedResults.length === 0) {
+    console.log("No valid responses to judge. Run eval first and fix any failures.");
+    process.exit(1);
+  }
+
+  const skippedIds = responsesFile.results
+    .filter((r) => r.status !== "pass")
+    .map((r) => r.id);
+
+  if (skippedIds.length > 0) {
+    console.log(`Skipping ${skippedIds.length} failed results: ${skippedIds.join(", ")}\n`);
+  }
+
+  const scoredResults = [];
+
+  for (let i = 0; i < passedResults.length; i++) {
+    const result = passedResults[i];
+    const test = testMap[result.id];
+
+    if (!test) {
+      console.log(`[${i + 1}] Skipping ${result.id}: no matching golden test`);
       continue;
     }
 
-    const validatorPrompt = `You are evaluating an AI's response to a writing improvement prompt.
-Evaluate the following JSON response based on the original user request.
-
-Original Request:
-Category: ${item.input.category}
-Target Goal: ${item.input.targetGoal}
-Intensity requested: ${item.input.intensity}
-Input text: ${item.input.text}
-Expected perspectives: ${item.input.expectedPerspectiveTitles.join(', ')}
-
-AI Response to evaluate:
-${JSON.stringify(item.response, null, 2)}
-
-Provide your evaluation as a JSON object matching this schema exactly:
-{
-  "category_accuracy": "pass|fail",
-  "category_accuracy_reason": "string",
-  "intensity_calibration": "pass|fail",
-  "intensity_calibration_reason": "string",
-  "structural_validity": "pass|fail",
-  "structural_validity_reason": "string",
-  "tip_relevance": 5, // 1-5 number
-  "tip_relevance_reason": "string",
-  "rewrite_quality": 5, // 1-5 number
-  "rewrite_quality_reason": "string"
-}
-
-- Category Accuracy: pass if perspective titles closely match expected titles and tips are category-specific.
-- Intensity Calibration: pass if tone matches requested intensity. Gentle = constructive/diplomatic. Hard = blunt. Full = savage/comedic.
-- Structural Validity: pass if exactly 3 perspectives, exactly 5 tips, valid heat_score, non-empty rewrite.
-- Tip Relevance: score 1-5 based on how actionable and useful the tips are.
-- Rewrite Quality: score 1-5 based on if it genuinely improves the input.
-
-Output ONLY JSON. No other text.`;
+    console.log(
+      `[${i + 1}/${passedResults.length}] Judging: ${result.id} (${test.category} / ${test.intensity})`
+    );
 
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GOOGLE_API_KEY}`;
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: validatorPrompt }] }],
-          generationConfig: {
-            maxOutputTokens: 1024,
-            responseMimeType: "application/json"
-          }
-        })
-      });
+      const scores = await judgeResponse(test, result.data);
 
-      if (!res.ok) {
-        throw new Error(`Google Error: ${await res.text()}`);
-      }
-
-      const json = await res.json();
-      let content = json.candidates[0].content.parts[0].text.replace(/^```json/i, '').replace(/^```/, '').replace(/```$/, '').trim();
-      const evaluation = JSON.parse(content);
-
-      scored.push({
-        testId: item.testId,
-        score: evaluation,
-        input: item.input,
-        response: item.response
-      });
-      console.log('DONE');
-    } catch (e) {
-      console.log(`ERROR (${e.message})`);
-      scored.push({
-        testId: item.testId,
-        score: {
-          category_accuracy: "fail", category_accuracy_reason: "Eval failed",
-          intensity_calibration: "fail", intensity_calibration_reason: "Eval failed",
-          structural_validity: "fail", structural_validity_reason: "Eval failed",
-          tip_relevance: 1, tip_relevance_reason: "Eval failed",
-          rewrite_quality: 1, rewrite_quality_reason: "Eval failed"
+      const scored = {
+        id: result.id,
+        category: test.category,
+        intensity: test.intensity,
+        scores: {
+          category_accuracy: scores.category_accuracy,
+          intensity_calibration: scores.intensity_calibration,
+          structural_validity: scores.structural_validity,
+          tip_relevance: scores.tip_relevance,
+          rewrite_quality: scores.rewrite_quality,
         },
-        input: item.input,
-        response: item.response
+        reasoning: scores.reasoning || "",
+        status: "scored",
+      };
+
+      scoredResults.push(scored);
+
+      const passFailStr = [
+        scores.category_accuracy === "pass" ? "CAT:P" : "CAT:F",
+        scores.intensity_calibration === "pass" ? "INT:P" : "INT:F",
+        scores.structural_validity === "pass" ? "STR:P" : "STR:F",
+      ].join(" ");
+
+      console.log(
+        `  ${passFailStr} | Tips: ${scores.tip_relevance}/5 | Rewrite: ${scores.rewrite_quality}/5`
+      );
+    } catch (err) {
+      console.log(`  ERROR: ${err.message}`);
+      scoredResults.push({
+        id: result.id,
+        category: test.category,
+        intensity: test.intensity,
+        scores: null,
+        reasoning: err.message,
+        status: "judge_error",
       });
+    }
+
+    if (i < passedResults.length - 1) {
+      await new Promise((r) => setTimeout(r, DELAY_MS));
     }
   }
 
-  fs.writeFileSync(SCORED_FILE, JSON.stringify(scored, null, 2));
-  console.log(`Saved judged results to eval/results/scored.json`);
+  const output = {
+    judgedAt: new Date().toISOString(),
+    totalJudged: scoredResults.length,
+    scoredResults,
+  };
+
+  writeFileSync(SCORED_PATH, JSON.stringify(output, null, 2));
+
+  console.log(`\nScored ${scoredResults.length} responses`);
+  console.log(`Saved to: ${SCORED_PATH}`);
 }
 
-judge();
+main().catch((err) => {
+  console.error("Fatal error:", err);
+  process.exit(1);
+});
