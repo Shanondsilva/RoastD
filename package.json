@@ -1,0 +1,15 @@
+{
+  "name": "roastd",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AI-powered document roasting with evaluation pipeline",
+  "scripts": {
+    "eval:run": "node eval/run-eval.js",
+    "eval:judge": "node eval/judge.js",
+    "eval:report": "node eval/report.js",
+    "eval": "npm run eval:run && npm run eval:judge && npm run eval:report"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5"
+  }
+}

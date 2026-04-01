@@ -1,0 +1,146 @@
+[
+  {
+    "id": "cv-gentle-1",
+    "category": "CV / Resume",
+    "intensity": "gentle",
+    "targetGoal": "Get hired as a senior frontend developer",
+    "text": "Experienced developer with a demonstrated history of working in the computer software industry. Skilled in React, JavaScript, HTML, CSS. Strong engineering professional. Built many websites for clients and always delivered on time. Responsible for managing the frontend architecture and leading a team of 3 developers. Improved performance by optimizing images.",
+    "expectedPerspectiveTitles": [
+      "Recruiter rejection email",
+      "Hiring manager's internal Slack message to team",
+      "ATS automated rejection reason"
+    ]
+  },
+  {
+    "id": "cv-hard-1",
+    "category": "CV / Resume",
+    "intensity": "hard",
+    "targetGoal": "Get hired as a staff software engineer",
+    "text": "Tech enthusiast and coding ninja. I breathe caffeine and write code. 10 years experience doing web stuff. Led a digital transformation that revolutionized the company's synergies. Worked with React, Angular, Vue, Svelte, Node, Python, Java, C++, Rust, Go. Promoted to Senior Developer after 6 months because I am a fast learner.",
+    "expectedPerspectiveTitles": [
+      "Recruiter rejection email",
+      "Hiring manager's internal Slack message to team",
+      "ATS automated rejection reason"
+    ]
+  },
+  {
+    "id": "cv-full-1",
+    "category": "CV / Resume",
+    "intensity": "full",
+    "targetGoal": "Get a job at Google",
+    "text": "To obtain a challenging position where I can utilize my skills to help the company achieve its goals. I am a hard worker and a team player. Details oriented. Duties included: writing code, attending meetings, fixing bugs, and deploying. Made the website 20% faster. Known as the 'go-to guy' for CSS issues.",
+    "expectedPerspectiveTitles": [
+      "Recruiter rejection email",
+      "Hiring manager's internal Slack message to team",
+      "ATS automated rejection reason"
+    ]
+  },
+  {
+    "id": "dating-gentle-1",
+    "category": "Dating Profile",
+    "intensity": "gentle",
+    "targetGoal": "Find a long-term relationship",
+    "text": "I love to laugh and have fun. Just looking for my partner in crime. I like traveling, food, and hanging out with friends. Netflix and chill on the weekends. Not looking for drama. Swipe right if you can hold a conversation.",
+    "expectedPerspectiveTitles": [
+      "A brutally honest friend reviewing it",
+      "The date's internal monologue after reading it",
+      "A dating coach's professional teardown"
+    ]
+  },
+  {
+    "id": "dating-hard-1",
+    "category": "Dating Profile",
+    "intensity": "hard",
+    "targetGoal": "Get more meaningful matches",
+    "text": "Entrepreneur, alpha male, crypto investor. I workout 6 days a week and expect you to take care of yourself too. Don't waste my time if you don't know what you want. I go to the gym, make money, and travel. Must love dogs.",
+    "expectedPerspectiveTitles": [
+      "A brutally honest friend reviewing it",
+      "The date's internal monologue after reading it",
+      "A dating coach's professional teardown"
+    ]
+  },
+  {
+    "id": "dating-full-1",
+    "category": "Dating Profile",
+    "intensity": "full",
+    "targetGoal": "Stand out from the crowd",
+    "text": "Fluent in sarcasm. Looking for someone who won't annoy me. If you can't handle me at my worst, you don't deserve me at my best. Pineapple belongs on pizza. I will probably like your dog more than you.",
+    "expectedPerspectiveTitles": [
+      "A brutally honest friend reviewing it",
+      "The date's internal monologue after reading it",
+      "A dating coach's professional teardown"
+    ]
+  },
+  {
+    "id": "pitch-gentle-1",
+    "category": "Startup Pitch",
+    "intensity": "gentle",
+    "targetGoal": "Raise a seed round from top VCs",
+    "text": "We are building the Uber for dog walking. It's an app where you can press a button and a dog walker comes to your house. The market is huge, everyone has a dog. We don't have revenue yet, but we have 100 people on our waitlist. We need $2M to hire developers and do marketing.",
+    "expectedPerspectiveTitles": [
+      "VC partner's rejection memo to their team",
+      "A competitor's internal reaction",
+      "A confused potential customer's review"
+    ]
+  },
+  {
+    "id": "pitch-hard-1",
+    "category": "Startup Pitch",
+    "intensity": "hard",
+    "targetGoal": "Get accepted into Y Combinator",
+    "text": "Our platform leverages AI and blockchain to create a decentralized ecosystem for content creators to monetize their synergized workflows. We are pre-product, but the technology is revolutionary. Our team consists of three visionary thinkers who met in college.",
+    "expectedPerspectiveTitles": [
+      "VC partner's rejection memo to their team",
+      "A competitor's internal reaction",
+      "A confused potential customer's review"
+    ]
+  },
+  {
+    "id": "pitch-full-1",
+    "category": "Startup Pitch",
+    "intensity": "full",
+    "targetGoal": "Raise a Series A",
+    "text": "We are disrupting the B2B SaaS space with our all-in-one productivity suite. Why use Slack, Jira, and Notion when you can use our tool that does it all worse? We have 10 beta testers, mostly our friends. We project $100M ARR by year 3. Trust us.",
+    "expectedPerspectiveTitles": [
+      "VC partner's rejection memo to their team",
+      "A competitor's internal reaction",
+      "A confused potential customer's review"
+    ]
+  },
+  {
+    "id": "bio-gentle-1",
+    "category": "Bio / About Me",
+    "intensity": "gentle",
+    "targetGoal": "Build a memorable personal brand",
+    "text": "Hi, I'm John. I'm a marketing professional who is passionate about helping businesses grow. I have 5 years of experience in digital marketing. In my free time, I enjoy reading and hiking. I believe in working hard and playing hard.",
+    "expectedPerspectiveTitles": [
+      "An editor cutting it from a publication",
+      "A reader's honest first impression",
+      "The algorithm deciding not to surface it"
+    ]
+  },
+  {
+    "id": "bio-hard-1",
+    "category": "Bio / About Me",
+    "intensity": "hard",
+    "targetGoal": "Attract high-ticket freelance clients",
+    "text": "Award-winning visionary thought leader and growth hacker. I scale brands to the moon. Featured in my high school newspaper. I help 6-figure solopreneurs achieve 7-figure success through paradigm-shifting funnels. DM me 'SCALE' to get started.",
+    "expectedPerspectiveTitles": [
+      "An editor cutting it from a publication",
+      "A reader's honest first impression",
+      "The algorithm deciding not to surface it"
+    ]
+  },
+  {
+    "id": "bio-full-1",
+    "category": "Bio / About Me",
+    "intensity": "full",
+    "targetGoal": "Get more followers on Twitter",
+    "text": "Ex-FAANG. Web3 enthusiast. I tweet about mental models, naval quotes, and how to wake up at 4 AM to optimize your life. Thread boi. Writing a newsletter that 10 people read.",
+    "expectedPerspectiveTitles": [
+      "An editor cutting it from a publication",
+      "A reader's honest first impression",
+      "The algorithm deciding not to surface it"
+    ]
+  }
+]
