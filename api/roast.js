@@ -49,6 +49,42 @@ const INTENSITY_RULES = {
   full: 'Savage, comedic, ruthless. Creative insults. The perspectives should be genuinely funny while still being accurate. Heat score should trend high (7-10). The tips and rewrite must still be genuinely useful. The humor is in the delivery, not at the expense of helpfulness.',
 };
 
+const RESPONSE_SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    roast_quote: {
+      type: "STRING",
+      description: "A 1-2 sentence brutal summary quote"
+    },
+    heat_score: {
+      type: "INTEGER",
+      description: "Heat score from 1 to 10"
+    },
+    multi_perspective: {
+      type: "ARRAY",
+      items: {
+        type: "OBJECT",
+        properties: {
+          title: { type: "STRING", description: "Perspective title" },
+          content: { type: "STRING", description: "Perspective content, 2-4 sentences" }
+        },
+        required: ["title", "content"]
+      },
+      description: "Exactly 3 adversarial perspectives"
+    },
+    tips: {
+      type: "ARRAY",
+      items: { type: "STRING" },
+      description: "Exactly 5 actionable tips"
+    },
+    rewrite: {
+      type: "STRING",
+      description: "A fully rewritten, improved version of the text"
+    }
+  },
+  required: ["roast_quote", "heat_score", "multi_perspective", "tips", "rewrite"]
+};
+
 function buildSystemPrompt(category, targetGoal, intensity) {
   const catRule = CATEGORY_RULES[category];
   const intRule = INTENSITY_RULES[intensity];
@@ -63,7 +99,7 @@ Intensity Rule: ${intRule}
 
 Tone Context: ${catRule.toneContext}
 
-You must provide exactly 3 adversarial perspectives based on these titles:
+You must provide exactly 3 adversarial perspectives using these exact titles:
 1. ${catRule.perspectives[0]}
 2. ${catRule.perspectives[1]}
 3. ${catRule.perspectives[2]}
@@ -72,37 +108,12 @@ You must also provide exactly 5 actionable tips focusing on: ${catRule.tipFocus}
 Finally, provide a completely rewritten version of the text. The rewrite format should be: ${catRule.rewriteFormat}.
 
 CRITICAL INSTRUCTIONS:
-- Return ONLY a valid JSON object. No text before or after. No markdown code fences.
-- No em dashes. Use commas, periods, or colons.
+- No em dashes anywhere. Use commas, periods, or colons instead.
 - If the user's text does not match the selected category, still respond based on the SELECTED CATEGORY, not what you think the text is.
-
-The JSON object must match this exact schema:
-{
-  "roast_quote": "A 1-2 sentence brutal summary quote",
-  "heat_score": 5,
-  "multi_perspective": [
-    {
-      "title": "Title 1",
-      "content": "Content 1"
-    },
-    {
-      "title": "Title 2",
-      "content": "Content 2"
-    },
-    {
-      "title": "Title 3",
-      "content": "Content 3"
-    }
-  ],
-  "tips": [
-    "Tip 1",
-    "Tip 2",
-    "Tip 3",
-    "Tip 4",
-    "Tip 5"
-  ],
-  "rewrite": "Full rewritten text here"
-}`;
+- The heat_score must be a number from 1 to 10, influenced by the intensity level.
+- Each perspective content must be 2-4 sentences.
+- Each tip must be actionable and specific to the ${category} category. No generic filler.
+- The rewrite must be complete and in the correct format for ${category}.`;
 }
 
 function validateResponse(data) {
@@ -127,6 +138,28 @@ function validateResponse(data) {
   if (!data.rewrite || typeof data.rewrite !== 'string') errors.push("Invalid rewrite string");
 
   return errors;
+}
+
+function cleanAndParseJSON(raw) {
+  let content = raw;
+
+  // Strip markdown code fences if present
+  content = content.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
+
+  // Try direct parse first
+  try {
+    return JSON.parse(content);
+  } catch (_) {
+    // Fall through to cleanup
+  }
+
+  // Fix trailing commas before } or ]
+  content = content.replace(/,\s*([}\]])/g, '$1');
+
+  // Remove any control characters except \n and \t
+  content = content.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '');
+
+  return JSON.parse(content);
 }
 
 export default async function handler(req) {
@@ -171,19 +204,19 @@ export default async function handler(req) {
   while (retryCount < 2) {
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GOOGLE_API_KEY}`;
-      const rawBody = JSON.stringify({
-        systemInstruction: { parts: [{ text: systemPrompt }] },
-        contents: [{ parts: [{ text }] }],
-        generationConfig: {
-          maxOutputTokens: 2048,
-          responseMimeType: "application/json"
-        }
-      });
 
       const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: rawBody
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          contents: [{ parts: [{ text }] }],
+          generationConfig: {
+            maxOutputTokens: 4096,
+            responseMimeType: "application/json",
+            responseSchema: RESPONSE_SCHEMA
+          }
+        })
       });
 
       if (!res.ok) {
@@ -195,17 +228,19 @@ export default async function handler(req) {
       tokensUsed += (json.usageMetadata?.totalTokenCount || 0);
 
       const candidate = json.candidates?.[0];
-      // 2.5-flash is a thinking model — skip thought parts, find the actual response part
+
+      if (!candidate || candidate.finishReason === 'SAFETY') {
+        throw new Error('Response was blocked by safety filters');
+      }
+
+      // 2.5-flash is a thinking model: skip thought parts, find the actual response
       const textPart = candidate?.content?.parts?.find(p => !p.thought && p.text);
       if (!textPart) {
         const reason = candidate?.finishReason || 'unknown';
         throw new Error(`Empty response from API (finishReason: ${reason})`);
       }
 
-      let content = textPart.text;
-      content = content.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
-      
-      const parsed = JSON.parse(content);
+      const parsed = cleanAndParseJSON(textPart.text);
       const errors = validateResponse(parsed);
       if (errors.length > 0) {
         throw new Error(`Validation failed: ${errors.join(', ')}`);
@@ -217,7 +252,7 @@ export default async function handler(req) {
       console.error(`Attempt ${retryCount + 1} failed: ${e.message}`);
       retryCount++;
       if (retryCount >= 2) {
-        return new Response(JSON.stringify({ error: 'Failed to generate valid response after retries', details: e.message }), { status: 502 });
+        return new Response(JSON.stringify({ error: e.message }), { status: 502 });
       }
     }
   }
@@ -230,7 +265,7 @@ export default async function handler(req) {
       'Content-Type': 'application/json',
       'X-Tokens-Used': tokensUsed.toString(),
       'X-Latency-Ms': latencyMs.toString(),
-      'X-Retry-Count': (retryCount).toString()
+      'X-Retry-Count': retryCount.toString()
     }
   });
 }
