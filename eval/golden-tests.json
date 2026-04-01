@@ -1,10 +1,10 @@
 [
   {
-    "id": "cv-gentle-1",
-    "category": "CV / Resume",
-    "intensity": "gentle",
-    "targetGoal": "Get hired as a senior frontend developer",
-    "text": "Experienced developer with a demonstrated history of working in the computer software industry. Skilled in React, JavaScript, HTML, CSS. Strong engineering professional. Built many websites for clients and always delivered on time. Responsible for managing the frontend architecture and leading a team of 3 developers. Improved performance by optimizing images.",
+    "id": "cv-mild-01",
+    "category": "cv",
+    "intensity": "mild",
+    "targetGoal": "Get a mid-level frontend developer role at a tech startup",
+    "text": "Experienced web developer with 3+ years of experience building websites and applications. Proficient in HTML, CSS, JavaScript, and React. Strong team player with excellent communication skills. Worked at two companies where I contributed to various projects and helped improve user experience. Bachelor's degree in Computer Science from State University. Familiar with agile methodologies and version control using Git. Passionate about creating clean, user-friendly interfaces. Looking for new opportunities to grow my career and make an impact. Available immediately. References available upon request.",
     "expectedPerspectiveTitles": [
       "Recruiter rejection email",
       "Hiring manager's internal Slack message to team",
@@ -12,11 +12,11 @@
     ]
   },
   {
-    "id": "cv-hard-1",
-    "category": "CV / Resume",
-    "intensity": "hard",
-    "targetGoal": "Get hired as a staff software engineer",
-    "text": "Tech enthusiast and coding ninja. I breathe caffeine and write code. 10 years experience doing web stuff. Led a digital transformation that revolutionized the company's synergies. Worked with React, Angular, Vue, Svelte, Node, Python, Java, C++, Rust, Go. Promoted to Senior Developer after 6 months because I am a fast learner.",
+    "id": "cv-medium-02",
+    "category": "cv",
+    "intensity": "medium",
+    "targetGoal": "Land a senior data engineer position at a FAANG company",
+    "text": "Results-driven data professional with 5 years of experience in data engineering and analytics. Built ETL pipelines using Python and SQL at a mid-size SaaS company. Managed a small data warehouse on AWS Redshift. Experience with Spark, Airflow, and basic machine learning concepts. Led a team of 2 junior analysts. Improved reporting speed by 40% through query optimization. Certified AWS Solutions Architect Associate. Contributed to open source data tools on GitHub. Comfortable with Docker and basic Kubernetes. Strong believer in data-driven decision making. Previously worked in consulting before transitioning to tech. MBA from Regional Business School, BS in Mathematics.",
     "expectedPerspectiveTitles": [
       "Recruiter rejection email",
       "Hiring manager's internal Slack message to team",
@@ -24,11 +24,11 @@
     ]
   },
   {
-    "id": "cv-full-1",
-    "category": "CV / Resume",
-    "intensity": "full",
-    "targetGoal": "Get a job at Google",
-    "text": "To obtain a challenging position where I can utilize my skills to help the company achieve its goals. I am a hard worker and a team player. Details oriented. Duties included: writing code, attending meetings, fixing bugs, and deploying. Made the website 20% faster. Known as the 'go-to guy' for CSS issues.",
+    "id": "cv-savage-03",
+    "category": "cv",
+    "intensity": "savage",
+    "targetGoal": "Become a VP of Product at a Series B fintech startup",
+    "text": "Dynamic product leader with 4 years of experience in product management. Currently a PM at a small B2B software company managing one product line. Launched 3 features last year that increased user engagement. Familiar with financial services from a 6-month internship at a regional bank. Skilled in Jira, Confluence, and Figma. Conducted 20+ user interviews. Built product roadmaps and presented to stakeholders. Took an online course in fintech fundamentals. Reads fintech newsletters daily. Organized a product management meetup group with 50 members. Believes in building products that solve real problems. Eager to take on more leadership responsibility.",
     "expectedPerspectiveTitles": [
       "Recruiter rejection email",
       "Hiring manager's internal Slack message to team",
@@ -36,11 +36,11 @@
     ]
   },
   {
-    "id": "dating-gentle-1",
-    "category": "Dating Profile",
-    "intensity": "gentle",
-    "targetGoal": "Find a long-term relationship",
-    "text": "I love to laugh and have fun. Just looking for my partner in crime. I like traveling, food, and hanging out with friends. Netflix and chill on the weekends. Not looking for drama. Swipe right if you can hold a conversation.",
+    "id": "dating-mild-04",
+    "category": "dating",
+    "intensity": "mild",
+    "targetGoal": "Attract someone who values deep conversation and outdoor adventures",
+    "text": "Hey there! I'm a 28-year-old software engineer who loves hiking, reading, and trying new restaurants. On weekends you'll find me exploring trails or curled up with a good book. I'm looking for someone who can hold a conversation and isn't afraid of a little adventure. I value honesty, humor, and genuine connection. My friends would describe me as loyal and a great listener. I'm 5'10, enjoy cooking Italian food, and have a golden retriever named Beans. Looking for something real, not just another swipe. Bonus points if you can recommend a good book or know the best taco spot in town.",
     "expectedPerspectiveTitles": [
       "A brutally honest friend reviewing it",
       "The date's internal monologue after reading it",
@@ -48,11 +48,11 @@
     ]
   },
   {
-    "id": "dating-hard-1",
-    "category": "Dating Profile",
-    "intensity": "hard",
-    "targetGoal": "Get more meaningful matches",
-    "text": "Entrepreneur, alpha male, crypto investor. I workout 6 days a week and expect you to take care of yourself too. Don't waste my time if you don't know what you want. I go to the gym, make money, and travel. Must love dogs.",
+    "id": "dating-medium-05",
+    "category": "dating",
+    "intensity": "medium",
+    "targetGoal": "Find a creative, artsy partner who appreciates vulnerability",
+    "text": "Artist. Dreamer. Overthinker. I paint when I'm happy and write poetry when I'm sad, so there's always something in the works. I spent last summer in a converted van traveling through Portugal, and it changed my perspective on everything. I'm looking for someone who gets that life isn't about the 9-to-5 grind. I want deep, raw conversations at 2am. I want someone who cries at movies and isn't embarrassed about it. My love language is quality time and my red flag is that I'll probably psychoanalyze our relationship. I don't watch TV. I think astrology is fun but not a personality. INFJ if that matters. Swipe right if you feel things deeply.",
     "expectedPerspectiveTitles": [
       "A brutally honest friend reviewing it",
       "The date's internal monologue after reading it",
@@ -60,11 +60,11 @@
     ]
   },
   {
-    "id": "dating-full-1",
-    "category": "Dating Profile",
-    "intensity": "full",
-    "targetGoal": "Stand out from the crowd",
-    "text": "Fluent in sarcasm. Looking for someone who won't annoy me. If you can't handle me at my worst, you don't deserve me at my best. Pineapple belongs on pizza. I will probably like your dog more than you.",
+    "id": "dating-savage-06",
+    "category": "dating",
+    "intensity": "savage",
+    "targetGoal": "Attract a fitness-oriented partner for a serious relationship",
+    "text": "Gym is my therapy. Up at 5am, protein shake by 5:15, at the squat rack by 5:30. I meal prep every Sunday and yes, I will judge your food choices (lovingly). I've done 3 Tough Mudders, 2 marathons, and I'm training for an Ironman. Looking for a gym partner who becomes a life partner. If you can't keep up, swipe left. I don't drink, I don't eat gluten, and I go to bed at 9:30pm. My idea of a perfect date is a sunrise hike followed by acai bowls. I have a six-pack and a five-year plan. No drama, no games, no excuses. Let's build something legendary together.",
     "expectedPerspectiveTitles": [
       "A brutally honest friend reviewing it",
       "The date's internal monologue after reading it",
@@ -72,11 +72,11 @@
     ]
   },
   {
-    "id": "pitch-gentle-1",
-    "category": "Startup Pitch",
-    "intensity": "gentle",
-    "targetGoal": "Raise a seed round from top VCs",
-    "text": "We are building the Uber for dog walking. It's an app where you can press a button and a dog walker comes to your house. The market is huge, everyone has a dog. We don't have revenue yet, but we have 100 people on our waitlist. We need $2M to hire developers and do marketing.",
+    "id": "pitch-mild-07",
+    "category": "pitch",
+    "intensity": "mild",
+    "targetGoal": "Raise a $500K pre-seed round from angel investors",
+    "text": "Introducing MealSync: the smart meal planning app for busy families. We solve the daily 'what's for dinner' problem by combining AI-powered recipe suggestions with automatic grocery list generation. Our target market is dual-income households with children aged 2-12. We've built an MVP and have 200 beta users with 60% weekly retention. The meal planning app market is worth $4.5B and growing 12% annually. Our team consists of myself (technical founder, ex-Google engineer) and a co-founder with 8 years in CPG marketing. We're raising $500K to hire two engineers and scale to 10,000 users in 12 months. Revenue model is freemium with a $9.99/month premium tier.",
     "expectedPerspectiveTitles": [
       "VC partner's rejection memo to their team",
       "A competitor's internal reaction",
@@ -84,11 +84,11 @@
     ]
   },
   {
-    "id": "pitch-hard-1",
-    "category": "Startup Pitch",
-    "intensity": "hard",
-    "targetGoal": "Get accepted into Y Combinator",
-    "text": "Our platform leverages AI and blockchain to create a decentralized ecosystem for content creators to monetize their synergized workflows. We are pre-product, but the technology is revolutionary. Our team consists of three visionary thinkers who met in college.",
+    "id": "pitch-medium-08",
+    "category": "pitch",
+    "intensity": "medium",
+    "targetGoal": "Convince a Series A VC that this is a $100M+ opportunity",
+    "text": "PetPlace is the Airbnb for pet boarding. We connect pet owners with verified, insured home-based pet sitters in their neighborhood. The pet care industry is $150B globally and fragmented, with 70% of pet owners dissatisfied with traditional kennels. We've processed 3,000 bookings in 6 months across 3 cities with a 15% take rate, generating $180K in GMV. Our NPS is 72. We have 400 verified sitters and 2,100 active pet owners. Repeat booking rate is 45%. Our moat is our proprietary sitter scoring algorithm and exclusive insurance partnership. Team of 5 (2 engineers, 1 designer, 2 ops). Raising $3M Series A to expand to 15 cities and launch our subscription plan for recurring bookings.",
     "expectedPerspectiveTitles": [
       "VC partner's rejection memo to their team",
       "A competitor's internal reaction",
@@ -96,11 +96,11 @@
     ]
   },
   {
-    "id": "pitch-full-1",
-    "category": "Startup Pitch",
-    "intensity": "full",
-    "targetGoal": "Raise a Series A",
-    "text": "We are disrupting the B2B SaaS space with our all-in-one productivity suite. Why use Slack, Jira, and Notion when you can use our tool that does it all worse? We have 10 beta testers, mostly our friends. We project $100M ARR by year 3. Trust us.",
+    "id": "pitch-savage-09",
+    "category": "pitch",
+    "intensity": "savage",
+    "targetGoal": "Raise a $2M seed round for an AI productivity tool",
+    "text": "WorkflowAI uses artificial intelligence to automate repetitive business workflows. Think Zapier but smarter. Our proprietary AI engine learns from user behavior and suggests automations they didn't even know they needed. We launched 2 months ago and have 50 free users. No paying customers yet, but our waitlist has 500 people. The workflow automation market is projected to reach $26B by 2028. Our founding team is 3 first-time founders who met at a hackathon. We've built the product nights and weekends while keeping our day jobs. We're raising $2M to go full-time and build out the platform. Our AI is better than the competition because we use a fine-tuned model. We believe in the future of work and want to make businesses 10x more productive.",
     "expectedPerspectiveTitles": [
       "VC partner's rejection memo to their team",
       "A competitor's internal reaction",
@@ -108,11 +108,11 @@
     ]
   },
   {
-    "id": "bio-gentle-1",
-    "category": "Bio / About Me",
-    "intensity": "gentle",
-    "targetGoal": "Build a memorable personal brand",
-    "text": "Hi, I'm John. I'm a marketing professional who is passionate about helping businesses grow. I have 5 years of experience in digital marketing. In my free time, I enjoy reading and hiking. I believe in working hard and playing hard.",
+    "id": "bio-mild-10",
+    "category": "bio",
+    "intensity": "mild",
+    "targetGoal": "Establish credibility as a freelance UX writer on LinkedIn",
+    "text": "UX Writer helping tech companies sound more human. I've spent the last 4 years crafting microcopy, onboarding flows, and error messages for SaaS products. Previously at a mid-size fintech startup where I rewrote the entire onboarding experience, reducing drop-off by 22%. I believe every word in a product should earn its place. When I'm not obsessing over button labels, I'm writing a newsletter about the intersection of language and design. Clients include 3 early-stage startups and a digital agency. Based in Austin. Open to freelance projects and consulting engagements. Let's make your product speak like a human, not a robot.",
     "expectedPerspectiveTitles": [
       "An editor cutting it from a publication",
       "A reader's honest first impression",
@@ -120,11 +120,11 @@
     ]
   },
   {
-    "id": "bio-hard-1",
-    "category": "Bio / About Me",
-    "intensity": "hard",
-    "targetGoal": "Attract high-ticket freelance clients",
-    "text": "Award-winning visionary thought leader and growth hacker. I scale brands to the moon. Featured in my high school newspaper. I help 6-figure solopreneurs achieve 7-figure success through paradigm-shifting funnels. DM me 'SCALE' to get started.",
+    "id": "bio-medium-11",
+    "category": "bio",
+    "intensity": "medium",
+    "targetGoal": "Build a personal brand as a thought leader in sustainable fashion",
+    "text": "Sustainable fashion advocate, conscious consumer, and storyteller. I started thrifting in college out of necessity and turned it into a mission. Now I help brands rethink their supply chains and consumers rethink their closets. I've spoken at 2 local sustainability events and been featured in a regional magazine. My Instagram has 4,200 followers where I share outfit breakdowns, brand deep-dives, and the occasional rant about greenwashing. I consult part-time with emerging fashion brands on sustainable sourcing. Certified in Sustainable Business Strategy from an online program. I believe fashion should be beautiful, ethical, and accessible. Currently writing my first ebook on building a conscious wardrobe.",
     "expectedPerspectiveTitles": [
       "An editor cutting it from a publication",
       "A reader's honest first impression",
@@ -132,11 +132,11 @@
     ]
   },
   {
-    "id": "bio-full-1",
-    "category": "Bio / About Me",
-    "intensity": "full",
-    "targetGoal": "Get more followers on Twitter",
-    "text": "Ex-FAANG. Web3 enthusiast. I tweet about mental models, naval quotes, and how to wake up at 4 AM to optimize your life. Thread boi. Writing a newsletter that 10 people read.",
+    "id": "bio-savage-12",
+    "category": "bio",
+    "intensity": "savage",
+    "targetGoal": "Get booked as a keynote speaker at major tech conferences",
+    "text": "Serial entrepreneur. Visionary. Disruptor. I've founded 3 startups (one pivoted, one shut down, one is 'in stealth mode'). I speak on stages about innovation, hustle culture, and the mindset of winners. My TEDx talk has 800 views. I post daily on LinkedIn about the grind and have 12,000 followers. I mentor young founders in my spare time and host a podcast called 'Unfiltered Hustle' with 45 episodes and a loyal audience. Angel investor in 2 pre-revenue startups. I read 52 books a year and wake up at 4:30am. My mission is to inspire the next generation of builders. Available for keynotes, panels, fireside chats, and brand partnerships.",
     "expectedPerspectiveTitles": [
       "An editor cutting it from a publication",
       "A reader's honest first impression",
