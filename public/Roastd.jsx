@@ -30,7 +30,7 @@ const INTENSITIES = [
 
 const loadScript = (src) => {
   return new Promise((resolve, reject) => {
-    if (document.querySelector(`script[src="\${src}"]`)) {
+    if (document.querySelector(`script[src="${src}"]`)) {
       resolve();
       return;
     }
@@ -570,7 +570,7 @@ function Roastd() {
               <span style={{ color: COLORS.accentRed, fontWeight: 'bold' }}>{result.heat_score}/10</span>
             </div>
             <div style={{ height: '12px', backgroundColor: COLORS.bgCard, borderRadius: '6px', overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `\${(result.heat_score / 10) * 100}%`, backgroundColor: COLORS.accentRed, transition: 'width 1s ease-out' }}></div>
+              <div style={{ height: '100%', width: `${(result.heat_score / 10) * 100}%`, backgroundColor: COLORS.accentRed, transition: 'width 1s ease-out' }}></div>
             </div>
           </div>
 

@@ -188,7 +188,7 @@ export default async function handler(req) {
 
       if (!res.ok) {
         const errText = await res.text();
-        throw new Error(\`Google API Error: \${res.status} \${errText}\`);
+        throw new Error(`Google API Error: ${res.status} ${errText}`);
       }
 
       const json = await res.json();
@@ -200,13 +200,13 @@ export default async function handler(req) {
       const parsed = JSON.parse(content);
       const errors = validateResponse(parsed);
       if (errors.length > 0) {
-        throw new Error(\`Validation failed: \${errors.join(', ')}\`);
+        throw new Error(`Validation failed: ${errors.join(', ')}`);
       }
 
       responseData = parsed;
       break;
     } catch (e) {
-      console.error(\`Attempt \${retryCount + 1} failed: \${e.message}\`);
+      console.error(`Attempt ${retryCount + 1} failed: ${e.message}`);
       retryCount++;
       if (retryCount >= 2) {
         return new Response(JSON.stringify({ error: 'Failed to generate valid response after retries', details: e.message }), { status: 502 });
