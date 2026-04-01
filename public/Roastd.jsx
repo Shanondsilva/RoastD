@@ -97,6 +97,12 @@ function Roastd() {
         background-attachment: fixed;
       }
 
+      /* Native Dropdown Overrides */
+      option {
+        background-color: #0f0f14;
+        color: #ffffff;
+      }
+
       /* Framer-style inputs */
       .premium-input {
         transition: border-color 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
@@ -406,7 +412,8 @@ function Roastd() {
           <div>
             <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: COLORS.textSecondary, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px' }}>1. Document Type</label>
             <select className="premium-input" style={{ width: '100%', backgroundColor: COLORS.bgInput, border: `1px solid ${COLORS.border}`, color: COLORS.textPrimary, padding: '16px', borderRadius: '14px', fontSize: '16px', appearance: 'none', cursor: 'pointer' }} value={category} onChange={e => setCategory(e.target.value)}>
-              {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.id}</option>)}
+              {/* THE FIX: Explicitly forcing dark background on the options */}
+              {CATEGORIES.map(c => <option key={c.id} value={c.id} style={{ backgroundColor: '#0f0f14', color: '#ffffff' }}>{c.id}</option>)}
             </select>
           </div>
           <div>
