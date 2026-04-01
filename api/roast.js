@@ -194,8 +194,14 @@ export default async function handler(req) {
       const json = await res.json();
       tokensUsed += (json.usageMetadata?.totalTokenCount || 0);
 
-      let content = json.candidates[0].content.parts[0].text;
-      content = content.replace(/^```json/i, '').replace(/^```/, '').replace(/```$/, '').trim();
+      const candidate = json.candidates?.[0];
+      if (!candidate?.content?.parts?.[0]?.text) {
+        const reason = candidate?.finishReason || 'unknown';
+        throw new Error(`Empty response from API (finishReason: ${reason})`);
+      }
+
+      let content = candidate.content.parts[0].text;
+      content = content.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
       
       const parsed = JSON.parse(content);
       const errors = validateResponse(parsed);
