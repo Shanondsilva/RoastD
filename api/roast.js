@@ -195,12 +195,14 @@ export default async function handler(req) {
       tokensUsed += (json.usageMetadata?.totalTokenCount || 0);
 
       const candidate = json.candidates?.[0];
-      if (!candidate?.content?.parts?.[0]?.text) {
+      // 2.5-flash is a thinking model — skip thought parts, find the actual response part
+      const textPart = candidate?.content?.parts?.find(p => !p.thought && p.text);
+      if (!textPart) {
         const reason = candidate?.finishReason || 'unknown';
         throw new Error(`Empty response from API (finishReason: ${reason})`);
       }
 
-      let content = candidate.content.parts[0].text;
+      let content = textPart.text;
       content = content.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
       
       const parsed = JSON.parse(content);
