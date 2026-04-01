@@ -26,23 +26,28 @@ const CATEGORIES = [
   { id: 'Bio / About Me', placeholder: 'e.g. Build a memorable personal brand' },
 ];
 
+// FIX: Separated backend 'id' from frontend 'label'
 const INTENSITIES = [
-  { id: 'Gentle Nudge', label: 'Gentle Nudge', color: COLORS.accentBlue },
-  { id: 'Hard Truth', label: 'Hard Truth', color: COLORS.accentYellow },
-  { id: 'Full Roast', label: 'Full Roast', color: COLORS.accentRed },
+  { id: 'gentle', label: 'Gentle Nudge', color: COLORS.accentBlue },
+  { id: 'hard', label: 'Hard Truth', color: COLORS.accentYellow },
+  { id: 'full', label: 'Full Roast', color: COLORS.accentRed },
+];
+
+const LOADING_QUOTES = [
+  "Sharpening the knives...",
+  "Judging your life choices...",
+  "Reading this physically hurts...",
+  "Consulting the burn book...",
+  "Preparing the emotional damage...",
+  "Wondering who let you write this..."
 ];
 
 const loadScript = (src) => {
   return new Promise((resolve, reject) => {
-    if (document.querySelector(`script[src="${src}"]`)) {
-      resolve();
-      return;
-    }
+    if (document.querySelector(`script[src="${src}"]`)) { resolve(); return; }
     const script = document.createElement('script');
-    script.src = src;
-    script.crossOrigin = 'anonymous';
-    script.onload = resolve;
-    script.onerror = reject;
+    script.src = src; script.crossOrigin = 'anonymous';
+    script.onload = resolve; script.onerror = reject;
     document.head.appendChild(script);
   });
 };
@@ -51,10 +56,11 @@ function Roastd() {
   // --- State ---
   const [category, setCategory] = useState(CATEGORIES[0].id);
   const [targetGoal, setTargetGoal] = useState('');
-  const [intensity, setIntensity] = useState('Hard Truth');
+  const [intensity, setIntensity] = useState('hard'); // FIX: Defaults to the correct backend ID
   const [text, setText] = useState('');
 
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingQuoteIdx, setLoadingQuoteIdx] = useState(0);
   const [result, setResult] = useState(null);
   const [stats, setStats] = useState(null);
   const [error, setError] = useState(null);
@@ -68,101 +74,108 @@ function Roastd() {
 
   // --- Initialization & Styling ---
   useEffect(() => {
-    // Load local storage
     try {
       const saved = localStorage.getItem('recentRoasts');
-      if (saved) {
-        setRecentRoasts(JSON.parse(saved));
-      }
-    } catch (e) {
-      console.error('Could not load recent roasts', e);
-    }
+      if (saved) setRecentRoasts(JSON.parse(saved));
+    } catch (e) { console.error('Could not load recent roasts', e); }
 
-    // Handle shared links via URL Hash
     if (window.location.hash) {
       try {
         const hashData = window.location.hash.substring(1);
         const decoded = JSON.parse(atob(decodeURIComponent(hashData)));
         setSharedRoast(decoded);
-      } catch (e) {
-        console.error('Invalid share link', e);
-      }
+      } catch (e) { console.error('Invalid share link', e); }
     }
 
-    // Inject Global Interactive Styles (Animations & Pseudo-classes)
+    // Inject Global Interactive Styles
     const style = document.createElement('style');
     style.innerHTML = `
       * { box-sizing: border-box; }
+      body { 
+        background-color: ${COLORS.bgDeep}; 
+        background-image: linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+        background-size: 30px 30px;
+        background-position: center center;
+        animation: moveBackground 20s linear infinite;
+      }
       
-      /* Input Interactions */
+      @keyframes moveBackground {
+        from { background-position: 0 0; }
+        to { background-position: 30px 30px; }
+      }
+
       .premium-input:focus {
-        outline: none;
-        border-color: ${COLORS.borderFocus} !important;
-        box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.05);
+        outline: none; border-color: ${COLORS.accentRed} !important;
+        box-shadow: 0 0 15px rgba(230, 57, 70, 0.15);
       }
       
-      /* Button Interactions */
-      .btn {
-        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        cursor: pointer;
-      }
-      .btn:hover:not(:disabled) { transform: translateY(-2px); }
-      .btn:active:not(:disabled) { transform: translateY(0); }
+      .btn { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; }
+      .btn:hover:not(:disabled) { transform: translateY(-3px) scale(1.02); }
+      .btn:active:not(:disabled) { transform: translateY(0) scale(0.98); }
       .btn:disabled { opacity: 0.5; cursor: not-allowed; }
       
-      /* Card Hover Effects */
-      .interactive-card {
-        transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
-      }
+      .interactive-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
       .interactive-card:hover {
         transform: translateY(-4px);
         box-shadow: 0 12px 24px -8px rgba(0,0,0,0.5);
       }
 
-      /* Scrollbar */
       ::-webkit-scrollbar { height: 6px; width: 6px; }
-      ::-webkit-scrollbar-track { background: ${COLORS.bgDeep}; }
+      ::-webkit-scrollbar-track { background: transparent; }
       ::-webkit-scrollbar-thumb { background: ${COLORS.border}; border-radius: 4px; }
       ::-webkit-scrollbar-thumb:hover { background: ${COLORS.borderFocus}; }
 
-      /* Animations */
       @keyframes flamePulse {
-        0%, 100% { transform: scale(1); opacity: 1; filter: brightness(1); }
-        50% { transform: scale(1.1); opacity: 0.8; filter: brightness(1.2); }
+        0%, 100% { transform: scale(1) rotate(-5deg); filter: drop-shadow(0 0 10px rgba(230,57,70,0.5)); }
+        50% { transform: scale(1.1) rotate(5deg); filter: drop-shadow(0 0 20px rgba(230,57,70,0.8)); }
       }
-      .flame-loader { animation: flamePulse 1.2s infinite ease-in-out; display: inline-block; font-size: 48px; }
+      .flame-loader { animation: flamePulse 1.2s infinite ease-in-out; display: inline-block; font-size: 56px; }
       
-      @keyframes slideUpFade {
-        from { opacity: 0; transform: translateY(20px); }
-        to { opacity: 1; transform: translateY(0); }
-      }
-      .stagger-1 { animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-      .stagger-2 { animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards; opacity: 0; }
-      .stagger-3 { animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards; opacity: 0; }
-      .stagger-4 { animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.3s forwards; opacity: 0; }
-      .stagger-5 { animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.4s forwards; opacity: 0; }
-
-      @keyframes fillBar {
-        from { width: 0%; }
-      }
+      @keyframes slideUpFade { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+      .stagger-1 { animation: slideUpFade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+      .stagger-2 { animation: slideUpFade 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards; opacity: 0; }
+      .stagger-3 { animation: slideUpFade 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards; opacity: 0; }
+      
+      @keyframes fillBar { from { width: 0%; } }
       .animate-bar { animation: fillBar 1.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+      @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-8px); }
+        50% { transform: translateX(8px); }
+        75% { transform: translateX(-8px); }
+      }
+      .error-shake { animation: shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both; }
     `;
     document.head.appendChild(style);
   }, []);
 
+  // Cycle loading quotes
+  useEffect(() => {
+    let interval;
+    if (isLoading) {
+      interval = setInterval(() => {
+        setLoadingQuoteIdx((prev) => (prev + 1) % LOADING_QUOTES.length);
+      }, 2500);
+    } else {
+      setLoadingQuoteIdx(0);
+    }
+    return () => clearInterval(interval);
+  }, [isLoading]);
+
   // --- Handlers ---
   const saveToRecent = (newResult, reqCategory, reqIntensity) => {
+    const intensityLabel = INTENSITIES.find(i => i.id === reqIntensity)?.label || reqIntensity;
     const roastData = {
       id: Date.now().toString(),
       roast_quote: newResult.roast_quote,
       heat_score: newResult.heat_score,
       category: reqCategory,
-      intensity: reqIntensity,
+      intensity: intensityLabel, // Save pretty label for history
       timestamp: new Date().toISOString()
     };
-
     setRecentRoasts(prev => {
-      const updated = [roastData, ...prev].slice(0, 5); // Kept last 5 for better horizontal scrolling
+      const updated = [roastData, ...prev].slice(0, 5);
       localStorage.setItem('recentRoasts', JSON.stringify(updated));
       return updated;
     });
@@ -188,7 +201,7 @@ function Roastd() {
           text: text.trim(),
           category,
           targetGoal: targetGoal.trim() || 'Improve my text',
-          intensity
+          intensity // FIX: This is now sending 'gentle', 'hard', or 'full'
         }),
       });
 
@@ -233,22 +246,17 @@ function Roastd() {
       roast_quote: result.roast_quote,
       heat_score: result.heat_score,
       category,
-      intensity
+      intensity: INTENSITIES.find(i => i.id === intensity)?.label || intensity
     };
     const b64 = encodeURIComponent(btoa(JSON.stringify(shareObj)));
     const url = window.location.origin + window.location.pathname + '#' + b64;
     navigator.clipboard.writeText(url).then(() => {
       alert('Share link copied to clipboard!');
-    }).catch(e => {
-      console.error('Failed to copy link.', e);
-    });
+    }).catch(e => { console.error('Failed to copy link.', e); });
   };
 
   const reset = () => {
-    setResult(null);
-    setStats(null);
-    setError(null);
-    setText('');
+    setResult(null); setStats(null); setError(null); setText('');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -260,57 +268,34 @@ function Roastd() {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
 
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(22);
-      doc.text('Roastd Results', 15, 20);
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Category: ${category} | Intensity: ${intensity}`, 15, 30);
-      doc.setDrawColor(230, 57, 70);
-      doc.setLineWidth(1);
-      doc.line(15, 36, 195, 36);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(22); doc.text('Roastd Results', 15, 20);
+      doc.setFontSize(12); doc.setFont('helvetica', 'normal');
+      doc.text(`Category: ${category} | Intensity: ${INTENSITIES.find(i => i.id === intensity)?.label}`, 15, 30);
+      doc.setDrawColor(230, 57, 70); doc.setLineWidth(1); doc.line(15, 36, 195, 36);
 
       let yPos = 46;
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(16);
-      doc.text('The Roast', 15, yPos);
-      yPos += 8;
-      doc.setFont('helvetica', 'italic');
-      doc.setFontSize(12);
-      const splitQuote = doc.splitTextToSize(`"${result.roast_quote}"`, 180);
-      doc.text(splitQuote, 15, yPos);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.text('The Roast', 15, yPos); yPos += 8;
+      doc.setFont('helvetica', 'italic'); doc.setFontSize(12);
+      const splitQuote = doc.splitTextToSize(`"${result.roast_quote}"`, 180); doc.text(splitQuote, 15, yPos);
       yPos += (splitQuote.length * 6) + 4;
 
-      doc.setFont('helvetica', 'bold');
-      doc.text(`Heat Score: ${result.heat_score}/10`, 15, yPos);
-      yPos += 14;
-
-      doc.setFontSize(16);
-      doc.text('Perspectives', 15, yPos);
-      yPos += 8;
+      doc.setFont('helvetica', 'bold'); doc.text(`Heat Score: ${result.heat_score}/10`, 15, yPos); yPos += 14;
+      doc.setFontSize(16); doc.text('Perspectives', 15, yPos); yPos += 8;
       doc.setFontSize(12);
       result.multi_perspective.forEach((p, i) => {
         if (yPos > 270) { doc.addPage(); yPos = 20; }
-        doc.setFont('helvetica', 'bold');
-        doc.text(`${i + 1}. ${p.title}`, 15, yPos);
-        yPos += 6;
+        doc.setFont('helvetica', 'bold'); doc.text(`${i + 1}. ${p.title}`, 15, yPos); yPos += 6;
         doc.setFont('helvetica', 'normal');
-        const splitText = doc.splitTextToSize(p.content, 180);
-        doc.text(splitText, 15, yPos);
+        const splitText = doc.splitTextToSize(p.content, 180); doc.text(splitText, 15, yPos);
         yPos += (splitText.length * 5) + 6;
       });
 
       if (yPos > 250) { doc.addPage(); yPos = 20; } else { yPos += 6; }
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(16);
-      doc.text('Actionable Tips', 15, yPos);
-      yPos += 8;
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'normal');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.text('Actionable Tips', 15, yPos); yPos += 8;
+      doc.setFontSize(12); doc.setFont('helvetica', 'normal');
       result.tips.forEach((t, i) => {
         if (yPos > 270) { doc.addPage(); yPos = 20; }
-        const splitTip = doc.splitTextToSize(`${i + 1}. ${t}`, 180);
-        doc.text(splitTip, 15, yPos);
+        const splitTip = doc.splitTextToSize(`${i + 1}. ${t}`, 180); doc.text(splitTip, 15, yPos);
         yPos += (splitTip.length * 5) + 3;
       });
 
@@ -327,7 +312,7 @@ function Roastd() {
 
       const children = [
         new Paragraph({ text: "Roastd Results", heading: HeadingLevel.HEADING_1 }),
-        new Paragraph({ text: `Category: ${category} | Intensity: ${intensity}` }),
+        new Paragraph({ text: `Category: ${category} | Intensity: ${INTENSITIES.find(i => i.id === intensity)?.label}` }),
         new Paragraph({ text: "" }),
         new Paragraph({ text: "The Roast", heading: HeadingLevel.HEADING_2 }),
         new Paragraph({ children: [new TextRun({ text: `"${result.roast_quote}"`, italics: true })] }),
@@ -354,17 +339,16 @@ function Roastd() {
     } catch (e) { alert('Failed to generate DOCX: ' + e.message); }
   };
 
-  // --- UI Helpers ---
   const getBorderColorForIndex = (i) => [COLORS.accentRed, COLORS.accentYellow, COLORS.accentBlue][i % 3];
 
   return (
-    <div style={{ maxWidth: '800px', margin: '0 auto', padding: '60px 20px', color: COLORS.textPrimary, minHeight: '100vh' }}>
+    <div style={{ maxWidth: '800px', margin: '0 auto', padding: '60px 20px', color: COLORS.textPrimary, minHeight: '100vh', position: 'relative', zIndex: 1 }}>
 
       {/* HEADER */}
       <header style={{ textAlign: 'center', marginBottom: '48px' }} className="stagger-1">
-        <h1 style={{ fontSize: '56px', fontWeight: '800', margin: '0 0 12px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', letterSpacing: '-0.02em' }}>
+        <h1 style={{ fontSize: '64px', fontWeight: '900', margin: '0 0 8px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', letterSpacing: '-0.03em', textShadow: `0 0 30px ${COLORS.accentRedSoft}` }}>
           Roastd
-          <span style={{ fontSize: '48px', lineHeight: '1' }}>🌶️</span>
+          <span style={{ fontSize: '48px', lineHeight: '1', filter: 'drop-shadow(0 0 10px rgba(251, 191, 36, 0.4))' }}>🌶️</span>
         </h1>
         <p style={{ fontSize: '18px', color: COLORS.textSecondary, margin: 0, fontWeight: '500' }}>Paste it. Pick your poison. Get roasted.</p>
       </header>
@@ -373,8 +357,8 @@ function Roastd() {
       {sharedRoast && !result && (
         <div className="stagger-2 interactive-card" style={{ backgroundColor: COLORS.bgCard, borderRadius: '16px', padding: '32px', border: `1px solid ${COLORS.border}`, borderLeft: `4px solid ${COLORS.accentBlue}`, marginBottom: '40px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-            <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: COLORS.accentBlue }}></span>
-            <h3 style={{ margin: 0, color: COLORS.accentBlue, fontSize: '14px', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: '700' }}>Shared Roast</h3>
+            <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: COLORS.accentBlue, boxShadow: `0 0 10px ${COLORS.accentBlue}` }}></span>
+            <h3 style={{ margin: 0, color: COLORS.accentBlue, fontSize: '14px', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: '700' }}>Someone shared a roast</h3>
           </div>
           <p style={{ margin: '0 0 24px 0', fontSize: '20px', fontStyle: 'italic', lineHeight: '1.5', color: COLORS.textPrimary }}>"{sharedRoast.roast_quote}"</p>
           <div style={{ display: 'flex', gap: '24px', fontSize: '14px', color: COLORS.textSecondary, marginBottom: '24px', flexWrap: 'wrap' }}>
@@ -383,15 +367,14 @@ function Roastd() {
             <span style={{ display: 'flex', flexDirection: 'column' }}><strong style={{ color: COLORS.accentRed }}>Heat Score</strong> <span style={{ color: COLORS.accentRed, fontWeight: '700' }}>{sharedRoast.heat_score}/10</span></span>
           </div>
           <button className="btn" style={{ padding: '12px 24px', backgroundColor: COLORS.bgInput, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}`, borderRadius: '8px', fontSize: '14px', fontWeight: '600' }} onClick={() => { setSharedRoast(null); window.history.replaceState(null, '', window.location.pathname); }}>
-            Roast Your Own Text
+            I want to get roasted
           </button>
         </div>
       )}
 
       {/* INPUT FORM */}
-      <section className="stagger-2" style={{ display: result ? 'none' : 'block', backgroundColor: COLORS.bgCard, borderRadius: '24px', padding: '40px', border: `1px solid ${COLORS.border}`, boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+      <section className="stagger-2" style={{ display: result ? 'none' : 'block', backgroundColor: 'rgba(19, 24, 36, 0.8)', backdropFilter: 'blur(10px)', borderRadius: '24px', padding: '40px', border: `1px solid ${COLORS.border}`, boxShadow: '0 20px 40px rgba(0,0,0,0.3)' }}>
 
-        {/* Dropdown & Input Row */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '24px', marginBottom: '32px' }}>
           <div>
             <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: COLORS.textSecondary, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px' }}>1. Document Type</label>
@@ -405,16 +388,15 @@ function Roastd() {
           </div>
         </div>
 
-        {/* Intensity Selector */}
         <div style={{ marginBottom: '32px' }}>
           <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: COLORS.textSecondary, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px' }}>3. Roast Intensity</label>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
             {INTENSITIES.map(int => {
-              const isActive = intensity === int.label;
+              const isActive = intensity === int.id; // FIX: Checking against ID
               return (
-                <button key={int.id} className="btn" onClick={() => setIntensity(int.label)}
-                  style={{ flex: 1, minWidth: '140px', padding: '16px', borderRadius: '12px', border: `1px solid ${isActive ? int.color : COLORS.border}`, backgroundColor: isActive ? `${int.color}15` : COLORS.bgInput, color: isActive ? int.color : COLORS.textSecondary, fontSize: '15px', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                  {isActive && <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: int.color }}></span>}
+                <button key={int.id} className="btn" onClick={() => setIntensity(int.id)} // FIX: Setting ID
+                  style={{ flex: 1, minWidth: '140px', padding: '16px', borderRadius: '12px', border: `1px solid ${isActive ? int.color : COLORS.border}`, backgroundColor: isActive ? `${int.color}15` : COLORS.bgInput, color: isActive ? int.color : COLORS.textSecondary, fontSize: '15px', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: isActive ? `0 0 15px ${int.color}33` : 'none' }}>
+                  {isActive && <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: int.color, boxShadow: `0 0 8px ${int.color}` }}></span>}
                   {int.label}
                 </button>
               );
@@ -422,28 +404,33 @@ function Roastd() {
           </div>
         </div>
 
-        {/* Text Area */}
         <div style={{ marginBottom: '32px' }}>
           <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: COLORS.textSecondary, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px' }}>4. The Victim (Paste Text)</label>
           <textarea className="premium-input" style={{ width: '100%', minHeight: '200px', backgroundColor: COLORS.bgInput, border: `1px solid ${COLORS.border}`, color: COLORS.textPrimary, padding: '20px', borderRadius: '12px', fontSize: '16px', lineHeight: '1.6', resize: 'vertical', transition: 'all 0.2s', fontFamily: 'inherit' }} placeholder="Paste your CV, dating bio, or startup pitch here. Don't hold back..." value={text} onChange={e => setText(e.target.value)} />
         </div>
 
-        <button className="btn" style={{ width: '100%', padding: '20px', backgroundColor: COLORS.accentRed, color: '#fff', border: 'none', borderRadius: '12px', fontSize: '18px', fontWeight: '800', letterSpacing: '1px', textTransform: 'uppercase', boxShadow: `0 8px 24px ${COLORS.accentRedSoft}`, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px' }} onClick={handleSubmit} disabled={isLoading || !text.trim()}>
+        <button className="btn" style={{ width: '100%', padding: '20px', backgroundColor: COLORS.accentRed, color: '#fff', border: 'none', borderRadius: '12px', fontSize: '18px', fontWeight: '800', letterSpacing: '1px', textTransform: 'uppercase', boxShadow: `0 8px 30px ${COLORS.accentRedSoft}`, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px' }} onClick={handleSubmit} disabled={isLoading || !text.trim()}>
           {isLoading ? 'Summoning the AI...' : 'Roast Me Alive'}
         </button>
 
         {error && (
-          <div style={{ marginTop: '24px', padding: '16px', backgroundColor: COLORS.accentRedSoft, border: `1px solid rgba(230, 57, 70, 0.3)`, borderRadius: '12px', color: COLORS.accentRed, fontSize: '15px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div className="error-shake" style={{ marginTop: '24px', padding: '16px 20px', backgroundColor: COLORS.accentRedSoft, border: `1px solid rgba(230, 57, 70, 0.4)`, borderRadius: '12px', color: COLORS.accentRed, fontSize: '15px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '20px' }}>⚠️</span>
             <strong>Error:</strong> {error}
           </div>
         )}
       </section>
 
-      {/* LOADING STATE */}
+      {/* LOADING STATE - Now Dynamic and Fun */}
       {isLoading && (
-        <div style={{ textAlign: 'center', padding: '100px 20px' }}>
+        <div className="stagger-1" style={{ textAlign: 'center', padding: '80px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <div className="flame-loader">🔥</div>
-          <h3 style={{ marginTop: '24px', color: COLORS.textSecondary, fontSize: '18px', fontWeight: '500' }}>Analyzing your life choices...</h3>
+          <div style={{ height: '40px', overflow: 'hidden', marginTop: '32px' }}>
+            <h3 key={loadingQuoteIdx} className="stagger-1" style={{ color: COLORS.accentYellow, fontSize: '20px', fontWeight: '700', margin: 0, textShadow: `0 0 10px ${COLORS.accentYellow}40` }}>
+              {LOADING_QUOTES[loadingQuoteIdx]}
+            </h3>
+          </div>
+          <p style={{ color: COLORS.textMuted, fontSize: '14px', marginTop: '12px' }}>This might take a few seconds...</p>
         </div>
       )}
 
@@ -455,7 +442,7 @@ function Roastd() {
           </div>
           <div style={{ display: 'flex', gap: '20px', overflowX: 'auto', paddingBottom: '20px', scrollSnapType: 'x mandatory' }}>
             {recentRoasts.map((r, idx) => (
-              <div key={idx} className="interactive-card" style={{ minWidth: '300px', width: '300px', backgroundColor: COLORS.bgCard, borderRadius: '16px', padding: '24px', border: `1px solid ${COLORS.border}`, scrollSnapAlign: 'start', flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
+              <div key={idx} className="interactive-card" style={{ minWidth: '300px', width: '300px', backgroundColor: 'rgba(19, 24, 36, 0.8)', backdropFilter: 'blur(5px)', borderRadius: '16px', padding: '24px', border: `1px solid ${COLORS.border}`, scrollSnapAlign: 'start', flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                   <span style={{ fontSize: '12px', fontWeight: '700', color: COLORS.textMuted, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{r.category}</span>
                   <span style={{ fontSize: '12px', fontWeight: '800', color: COLORS.accentRed, backgroundColor: COLORS.accentRedSoft, padding: '4px 8px', borderRadius: '4px' }}>{r.heat_score}/10</span>
@@ -473,30 +460,28 @@ function Roastd() {
       {result && (
         <section ref={resultsRef} style={{ paddingTop: '20px' }}>
 
-          {/* Headline Verdict */}
-          <div className="stagger-1" style={{ backgroundColor: COLORS.bgCard, borderRadius: '24px', padding: '48px 40px', border: `1px solid ${COLORS.border}`, boxShadow: '0 20px 40px rgba(0,0,0,0.2)', marginBottom: '32px', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: 0, left: 0, width: '6px', height: '100%', backgroundColor: COLORS.accentRed }}></div>
+          <div className="stagger-1" style={{ backgroundColor: 'rgba(19, 24, 36, 0.9)', backdropFilter: 'blur(10px)', borderRadius: '24px', padding: '48px 40px', border: `1px solid ${COLORS.border}`, boxShadow: `0 20px 50px rgba(0,0,0,0.4), inset 0 0 0 1px rgba(255,255,255,0.05)`, marginBottom: '32px', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, width: '8px', height: '100%', backgroundColor: COLORS.accentRed, boxShadow: `0 0 20px ${COLORS.accentRed}` }}></div>
             <h2 style={{ margin: '0 0 24px 0', fontSize: '14px', textTransform: 'uppercase', letterSpacing: '2px', color: COLORS.textMuted, fontWeight: '700' }}>The Verdict</h2>
             <p style={{ margin: 0, fontSize: '28px', fontStyle: 'italic', fontWeight: '600', lineHeight: '1.4', color: COLORS.textPrimary }}>"{result.roast_quote}"</p>
 
-            {/* Animated Heat Score */}
             <div style={{ marginTop: '40px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '12px' }}>
                 <span style={{ fontSize: '14px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px', color: COLORS.textSecondary }}>Heat Score</span>
-                <span style={{ fontSize: '32px', fontWeight: '800', color: COLORS.accentRed, lineHeight: '1' }}>{result.heat_score}<span style={{ fontSize: '18px', color: COLORS.textMuted }}>/10</span></span>
+                <span style={{ fontSize: '32px', fontWeight: '800', color: COLORS.accentRed, lineHeight: '1', textShadow: `0 0 15px ${COLORS.accentRedSoft}` }}>{result.heat_score}<span style={{ fontSize: '18px', color: COLORS.textMuted }}>/10</span></span>
               </div>
-              <div style={{ height: '8px', backgroundColor: COLORS.bgInput, borderRadius: '4px', overflow: 'hidden' }}>
-                <div className="animate-bar" style={{ height: '100%', width: `${(result.heat_score / 10) * 100}%`, backgroundColor: COLORS.accentRed, borderRadius: '4px' }}></div>
+              <div style={{ height: '8px', backgroundColor: COLORS.bgInput, borderRadius: '4px', overflow: 'hidden', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.5)' }}>
+                <div className="animate-bar" style={{ height: '100%', width: `${(result.heat_score / 10) * 100}%`, backgroundColor: COLORS.accentRed, borderRadius: '4px', boxShadow: `0 0 10px ${COLORS.accentRed}` }}></div>
               </div>
             </div>
           </div>
 
-          {/* Perspectives Grid */}
           <div className="stagger-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', marginBottom: '32px' }}>
             {result.multi_perspective.map((p, idx) => {
               const color = getBorderColorForIndex(idx);
               return (
-                <div key={idx} className="interactive-card" style={{ backgroundColor: COLORS.bgCard, borderRadius: '16px', padding: '32px', border: `1px solid ${COLORS.border}`, borderTop: `4px solid ${color}` }}>
+                <div key={idx} className="interactive-card" style={{ backgroundColor: COLORS.bgCard, borderRadius: '16px', padding: '32px', border: `1px solid ${COLORS.border}`, borderTop: `4px solid ${color}`, position: 'relative', overflow: 'hidden' }}>
+                  <div style={{ position: 'absolute', top: '-10px', left: '-10px', width: '40px', height: '40px', background: `radial-gradient(circle, ${color}33 0%, transparent 70%)` }}></div>
                   <h4 style={{ margin: '0 0 16px 0', color: color, fontSize: '14px', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: '800' }}>{p.title}</h4>
                   <p style={{ margin: 0, lineHeight: '1.7', fontSize: '15px', color: COLORS.textSecondary }}>{p.content}</p>
                 </div>
@@ -504,51 +489,50 @@ function Roastd() {
             })}
           </div>
 
-          {/* Actionable Tips */}
           <div className="stagger-3 interactive-card" style={{ backgroundColor: COLORS.bgCard, borderRadius: '24px', padding: '40px', border: `1px solid ${COLORS.border}`, marginBottom: '32px' }}>
             <h3 style={{ fontSize: '20px', fontWeight: '800', margin: '0 0 24px 0', display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ display: 'inline-block', width: '12px', height: '12px', borderRadius: '2px', backgroundColor: COLORS.accentYellow }}></span>
+              <span style={{ display: 'inline-block', width: '12px', height: '12px', borderRadius: '2px', backgroundColor: COLORS.accentYellow, boxShadow: `0 0 10px ${COLORS.accentYellow}80` }}></span>
               Actionable Fixes
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               {result.tips.map((t, idx) => (
                 <div key={idx} style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '28px', height: '28px', borderRadius: '50%', backgroundColor: `${COLORS.accentYellow}15`, color: COLORS.accentYellow, fontSize: '13px', fontWeight: '800', flexShrink: 0, marginTop: '2px' }}>{idx + 1}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '28px', height: '28px', borderRadius: '50%', backgroundColor: `${COLORS.accentYellow}15`, color: COLORS.accentYellow, fontSize: '13px', fontWeight: '800', flexShrink: 0, marginTop: '2px', border: `1px solid ${COLORS.accentYellow}40` }}>{idx + 1}</div>
                   <p style={{ margin: 0, fontSize: '16px', lineHeight: '1.6', color: COLORS.textPrimary }}>{t}</p>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Rewrite */}
-          <div className="stagger-4" style={{ backgroundColor: COLORS.bgCard, borderRadius: '24px', border: `1px solid ${COLORS.border}`, overflow: 'hidden', marginBottom: '40px' }}>
+          <div className="stagger-3" style={{ backgroundColor: COLORS.bgCard, borderRadius: '24px', border: `1px solid ${COLORS.border}`, overflow: 'hidden', marginBottom: '40px', boxShadow: `0 10px 30px rgba(0,0,0,0.3)` }}>
             <div style={{ padding: '24px 32px', borderBottom: `1px solid ${COLORS.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: COLORS.bgDeep }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '800', margin: 0, color: COLORS.accentBlue, textTransform: 'uppercase', letterSpacing: '1px' }}>The Rewrite</h3>
-              <button className="btn" onClick={handleCopyRewrite} style={{ padding: '8px 16px', backgroundColor: 'transparent', border: `1px solid ${copied ? COLORS.success : COLORS.border}`, color: copied ? COLORS.success : COLORS.textSecondary, borderRadius: '6px', fontSize: '13px', fontWeight: '600' }}>
-                {copied ? 'Copied!' : 'Copy Text'}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', backgroundColor: COLORS.accentBlue, boxShadow: `0 0 8px ${COLORS.accentBlue}` }}></span>
+                <h3 style={{ fontSize: '16px', fontWeight: '800', margin: 0, color: COLORS.accentBlue, textTransform: 'uppercase', letterSpacing: '1px' }}>The Rewrite</h3>
+              </div>
+              <button className="btn" onClick={handleCopyRewrite} style={{ padding: '8px 16px', backgroundColor: copied ? `${COLORS.success}15` : 'transparent', border: `1px solid ${copied ? COLORS.success : COLORS.border}`, color: copied ? COLORS.success : COLORS.textSecondary, borderRadius: '8px', fontSize: '13px', fontWeight: '600', transition: 'all 0.2s' }}>
+                {copied ? 'Copied to Clipboard! ✓' : 'Copy Text'}
               </button>
             </div>
-            <div style={{ padding: '32px', whiteSpace: 'pre-wrap', lineHeight: '1.8', fontSize: '16px', color: COLORS.textPrimary }}>
+            <div style={{ padding: '32px', whiteSpace: 'pre-wrap', lineHeight: '1.8', fontSize: '16px', color: COLORS.textPrimary, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace' }}>
               {result.rewrite}
             </div>
           </div>
 
-          {/* Footer Actions */}
-          <div className="stagger-5" style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', justifyContent: 'center' }}>
-            <button className="btn" style={{ padding: '14px 28px', backgroundColor: COLORS.bgCard, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}`, borderRadius: '12px', fontSize: '15px', fontWeight: '700' }} onClick={handleDownloadPDF}>Download PDF</button>
-            <button className="btn" style={{ padding: '14px 28px', backgroundColor: COLORS.bgCard, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}`, borderRadius: '12px', fontSize: '15px', fontWeight: '700' }} onClick={handleDownloadDOCX}>Download DOCX</button>
-            <button className="btn" style={{ padding: '14px 28px', backgroundColor: COLORS.accentBlueSoft, color: COLORS.accentBlue, border: `1px solid rgba(59, 130, 246, 0.3)`, borderRadius: '12px', fontSize: '15px', fontWeight: '700' }} onClick={handleShare}>Share Roast Link</button>
-            <button className="btn" style={{ padding: '14px 28px', backgroundColor: COLORS.textPrimary, color: COLORS.bgDeep, border: 'none', borderRadius: '12px', fontSize: '15px', fontWeight: '800', marginLeft: 'auto' }} onClick={reset}>Roast Another</button>
+          <div className="stagger-3" style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', justifyContent: 'center' }}>
+            <button className="btn" style={{ padding: '16px 28px', backgroundColor: COLORS.bgCard, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}`, borderRadius: '12px', fontSize: '15px', fontWeight: '700' }} onClick={handleDownloadPDF}>Download PDF</button>
+            <button className="btn" style={{ padding: '16px 28px', backgroundColor: COLORS.bgCard, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}`, borderRadius: '12px', fontSize: '15px', fontWeight: '700' }} onClick={handleDownloadDOCX}>Download DOCX</button>
+            <button className="btn" style={{ padding: '16px 28px', backgroundColor: COLORS.accentBlueSoft, color: COLORS.accentBlue, border: `1px solid rgba(59, 130, 246, 0.4)`, borderRadius: '12px', fontSize: '15px', fontWeight: '700' }} onClick={handleShare}>Share Roast Link</button>
+            <button className="btn" style={{ padding: '16px 32px', backgroundColor: COLORS.textPrimary, color: COLORS.bgDeep, border: 'none', borderRadius: '12px', fontSize: '15px', fontWeight: '800', marginLeft: 'auto', boxShadow: `0 4px 15px rgba(255,255,255,0.15)` }} onClick={reset}>Roast Another</button>
           </div>
 
-          {/* Observability Stats */}
           {stats && (
-            <div className="stagger-5" style={{ marginTop: '60px', textAlign: 'center', borderTop: `1px solid ${COLORS.border}`, paddingTop: '24px' }}>
+            <div className="stagger-3" style={{ marginTop: '80px', textAlign: 'center', borderTop: `1px solid ${COLORS.border}`, paddingTop: '32px' }}>
               <button onClick={() => setShowStats(!showStats)} style={{ background: 'none', border: 'none', color: COLORS.textMuted, textDecoration: 'underline', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>
                 {showStats ? 'Hide API Stats' : 'View API Stats'}
               </button>
               {showStats && (
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '32px', marginTop: '16px', fontSize: '13px', color: COLORS.textMuted, animation: 'slideUpFade 0.3s ease forwards' }}>
+                <div style={{ display: 'inline-flex', justifyContent: 'center', gap: '32px', marginTop: '20px', padding: '16px 32px', backgroundColor: COLORS.bgInput, borderRadius: '100px', border: `1px solid ${COLORS.border}`, fontSize: '13px', color: COLORS.textMuted, animation: 'slideUpFade 0.3s ease forwards' }}>
                   <div><strong style={{ color: COLORS.textSecondary }}>Tokens:</strong> {stats.tokens}</div>
                   <div><strong style={{ color: COLORS.textSecondary }}>Latency:</strong> {stats.latency}ms</div>
                   <div><strong style={{ color: COLORS.textSecondary }}>Retries:</strong> {stats.retries}</div>
