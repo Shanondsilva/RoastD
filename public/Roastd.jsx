@@ -33,11 +33,11 @@ const INTENSITIES = [
 ];
 
 const LOADING_QUOTES = [
-  "Running your text through the reality check...",
-  "Trying to find a silver lining...",
-  "Oof. Okay, let's look at this...",
-  "Waking up the harsh AI judge...",
-  "Preparing the emotional damage..."
+  "Analyzing your text...",
+  "Finding the weak spots...",
+  "Crafting the perfect insult...",
+  "Almost done. This is going to hurt.",
+  "Generating your roast..."
 ];
 
 // Defined outside component so it is never recreated on render
@@ -176,9 +176,13 @@ function Roastd() {
   const [showResubmissionInterstitial, setShowResubmissionInterstitial] = useState(false);
   const [pendingText, setPendingText] = useState('');
   const [showShareCard, setShowShareCard] = useState(false);
+  const [isPasting, setIsPasting] = useState(false);
+  const [isFadingOut, setIsFadingOut] = useState(false);
   const wordCount = wordsFrom(text).length;
+  const charCount = text.length;
 
   const resultsRef = useRef(null);
+  const textareaRef = useRef(null);
 
   useEffect(() => {
     try {
@@ -213,6 +217,13 @@ function Roastd() {
       button, input, select, textarea {
         font-family: 'DM Sans', system-ui, sans-serif;
       }
+
+      @media (max-width: 640px) {
+        body { -webkit-text-size-adjust: 100%; }
+      }
+      html { scroll-behavior: smooth; }
+      button, select, input, textarea { touch-action: manipulation; }
+      textarea { -webkit-appearance: none; }
 
       option {
         background-color: #0f0f14;
@@ -411,6 +422,19 @@ function Roastd() {
     }
   }, [category, targetGoal, intensity, saveToRecent, lastOriginalText]);
 
+  const handleTextChange = useCallback((e) => {
+    setText(e.target.value);
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 500) + 'px';
+    }
+  }, []);
+
+  const handlePaste = useCallback(() => {
+    setIsPasting(true);
+    setTimeout(() => setIsPasting(false), 500);
+  }, []);
+
   const handleSubmit = useCallback(() => {
     const cand = text.trim();
     if (!cand) return;
@@ -421,6 +445,13 @@ function Roastd() {
     }
     performSubmit({ submitText: cand, isResubmission: false });
   }, [text, lastRewrite, performSubmit]);
+
+  const handleKeyDown = useCallback((e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+      e.preventDefault();
+      if (!isLoading && text.trim().length > 0) handleSubmit();
+    }
+  }, [isLoading, text, handleSubmit]);
 
   const handleCopyRewrite = useCallback(() => {
     if (!result) return;
@@ -446,8 +477,12 @@ function Roastd() {
   }, [result, category, intensity]);
 
   const reset = useCallback(() => {
-    setResult(null); setStats(null); setError(null); setText('');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setIsFadingOut(true);
+    setTimeout(() => {
+      setResult(null); setStats(null); setError(null); setText('');
+      setIsFadingOut(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 300);
   }, []);
 
   const handleDownloadPDF = useCallback(async () => {
@@ -574,6 +609,19 @@ function Roastd() {
     marginBottom: '20px',
   });
 
+  let countColor = COLORS.error;
+  let countMsg = "Too short for a good roast. Paste more.";
+  if (wordCount >= 30 && wordCount < 80) {
+    countColor = COLORS.accentYellow;
+    countMsg = "Getting there. More context means better feedback.";
+  } else if (wordCount >= 80 && wordCount <= 500) {
+    countColor = COLORS.success;
+    countMsg = "Good length.";
+  } else if (wordCount > 500) {
+    countColor = COLORS.accentBlue;
+    countMsg = "Solid. The AI has plenty to work with.";
+  }
+
   return (
     <div style={{
       maxWidth: '800px',
@@ -587,9 +635,9 @@ function Roastd() {
     }}>
 
       {/* HEADER */}
-      <header style={{ textAlign: 'center', marginBottom: '56px' }} className="stagger-1">
+      <header style={{ textAlign: 'center', marginBottom: isMobile ? '32px' : '56px' }} className="stagger-1">
         <h1 style={{
-          fontSize: isMobile ? '48px' : '72px',
+          fontSize: isMobile ? '44px' : '72px',
           fontWeight: '900',
           margin: '0 0 16px 0',
           display: 'flex',
@@ -627,7 +675,14 @@ function Roastd() {
             <div style={{ fontSize: '24px', fontWeight: '900', color: COLORS.accentRed }}>Roastd 🌶️</div>
             <div style={{ fontSize: '32px', fontWeight: '800', fontStyle: 'italic', lineHeight: '1.3' }}>"{result.roast_quote}"</div>
             <div>
+              <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: COLORS.textSecondary, textTransform: 'uppercase', letterSpacing: '1px', background: 'rgba(255,255,255,0.1)', padding: '6px 12px', borderRadius: '8px' }}>{category}</span>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: COLORS.textSecondary, textTransform: 'uppercase', letterSpacing: '1px', background: 'rgba(255,255,255,0.1)', padding: '6px 12px', borderRadius: '8px' }}>{INTENSITIES.find(i => i.id === intensity)?.label}</span>
+              </div>
               <div style={{ fontSize: '18px', fontWeight: 'bold' }}>Heat Score: <span style={{color: COLORS.accentRed}}>{result.heat_score}/10</span></div>
+              <div style={{ width: '100%', height: '8px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '4px', overflow: 'hidden', margin: '12px 0 16px 0' }}>
+                <div style={{ width: `${(result.heat_score / 10) * 100}%`, height: '100%', backgroundColor: COLORS.accentRed }} />
+              </div>
               <div style={{ fontSize: '14px', color: COLORS.textMuted, marginTop: '8px' }}>Get roasted at roastd.vercel.app</div>
             </div>
           </div>
@@ -636,12 +691,12 @@ function Roastd() {
 
       {/* SHARED VIEW ALERT */}
       {sharedRoast && !result && (
-        <div className="stagger-2 framer-card" style={{ borderRadius: '20px', padding: '32px', borderLeft: `4px solid ${COLORS.accentBlue}`, marginBottom: '40px' }}>
+        <div className="stagger-2 framer-card" style={{ borderRadius: '20px', padding: isMobile ? '24px' : '32px', borderLeft: `4px solid ${COLORS.accentBlue}`, marginBottom: '40px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
             <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: COLORS.accentBlue }}></span>
             <h3 style={{ margin: 0, color: COLORS.accentBlue, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1.5px', fontWeight: '700' }}>Someone shared a roast</h3>
           </div>
-          <p style={{ margin: '0 0 24px 0', fontSize: isMobile ? '18px' : '22px', fontStyle: 'italic', lineHeight: '1.5', color: COLORS.textPrimary }}>
+          <p style={{ margin: '0 0 24px 0', fontSize: '18px', fontStyle: 'italic', lineHeight: '1.5', color: COLORS.textPrimary }}>
             "{sharedRoast.roast_quote}"
           </p>
           <div style={{ display: 'flex', gap: '32px', fontSize: '14px', color: COLORS.textSecondary, marginBottom: '32px', flexWrap: 'wrap' }}>
@@ -672,7 +727,7 @@ function Roastd() {
       {/* INPUT FORM */}
       <section
         className="stagger-2 framer-card"
-        style={{ display: result ? 'none' : 'block', borderRadius: '28px', padding: isMobile ? '28px 20px' : '48px', marginBottom: '40px' }}
+        style={{ display: result ? 'none' : 'block', borderRadius: isMobile ? '20px' : '28px', padding: isMobile ? '24px' : '48px', marginBottom: '40px' }}
       >
         {/* Category + Goal */}
         <div style={{
@@ -717,7 +772,7 @@ function Roastd() {
           <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: COLORS.textSecondary, textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '12px' }}>
             3. Roast Intensity
           </label>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+          <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', flexWrap: 'wrap', gap: '12px' }}>
             {INTENSITIES.map(int => {
               const isActive = intensity === int.id;
               return (
@@ -767,27 +822,31 @@ function Roastd() {
             4. The Victim (Paste Text)
           </label>
           <textarea
+            ref={textareaRef}
             className="premium-input"
             style={{
               width: '100%',
               maxWidth: '100%',
-              minHeight: '220px',
+              minHeight: '180px',
               backgroundColor: COLORS.bgInput,
-              border: `1px solid ${COLORS.border}`,
+              border: `1px solid ${isPasting ? COLORS.success : COLORS.border}`,
               color: COLORS.textPrimary,
               padding: isMobile ? '16px' : '24px',
               borderRadius: '16px',
-              fontSize: '16px',
+              fontSize: isMobile ? '15px' : '16px',
               lineHeight: '1.6',
-              resize: 'vertical',
-              boxShadow: textareaFocused ? '0 0 0 4px rgba(244, 63, 94, 0.08)' : 'none',
+              resize: 'none',
+              overflowY: 'auto',
+              boxShadow: isPasting ? `0 0 0 4px #10b98140` : textareaFocused ? '0 0 0 4px rgba(244, 63, 94, 0.08)' : 'none',
               transition: 'box-shadow 0.3s ease, border-color 0.3s ease',
             }}
             placeholder={currentCategoryObj.textareaPlaceholder}
             value={text}
-            onChange={e => setText(e.target.value)}
+            onChange={handleTextChange}
             onFocus={() => setTextareaFocused(true)}
             onBlur={() => setTextareaFocused(false)}
+            onPaste={handlePaste}
+            onKeyDown={handleKeyDown}
           />
           {!text && !textareaFocused && (
             <p style={{ margin: '8px 0 0 4px', fontSize: '13px', color: COLORS.textMuted, lineHeight: '1.5' }}>
@@ -795,8 +854,11 @@ function Roastd() {
             </p>
           )}
           {text && (
-            <p style={{ margin: '8px 0 0 4px', fontSize: '13px', color: wordCount < 30 ? COLORS.error : wordCount < 80 ? COLORS.warning : COLORS.success, lineHeight: '1.5' }}>
-              Word count: {wordCount} {wordCount < 30 ? '(Too short!)' : wordCount < 80 ? '(Need more context)' : '(Good length!)'}
+            <p style={{ margin: '8px 0 0 4px', fontSize: '13px', color: countColor, lineHeight: '1.5', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>
+                Word count: {wordCount} <span style={{ color: COLORS.textMuted, fontSize: '12px' }}>({charCount} characters)</span>
+              </span>
+              <span>{countMsg}</span>
             </p>
           )}
         </div>
@@ -807,7 +869,7 @@ function Roastd() {
           aria-label="Submit text for roasting"
           style={{
             width: '100%',
-            padding: '22px',
+            padding: isMobile ? '18px' : '22px',
             backgroundColor: COLORS.accentRed,
             color: '#fff',
             border: 'none',
@@ -826,6 +888,7 @@ function Roastd() {
         >
           {isLoading ? 'Roasting in progress...' : 'Roast Me Alive'}
         </button>
+        <div style={{ fontSize: '12px', color: COLORS.textMuted, textAlign: 'center', marginTop: '12px' }}>Cmd+Enter (or Ctrl+Enter) to roast</div>
 
         {error && (
           <div
@@ -833,7 +896,10 @@ function Roastd() {
             style={{ marginTop: '24px', padding: '16px 20px', backgroundColor: COLORS.accentRedSoft, border: `1px solid rgba(244, 63, 94, 0.4)`, borderRadius: '14px', color: COLORS.accentRed, fontSize: '15px', display: 'flex', alignItems: 'center', gap: '12px' }}
           >
             <span style={{ fontSize: '20px' }}>⚠️</span>
-            <strong>Error:</strong> {error}
+            <div style={{ flex: 1 }}>
+              <strong>Error:</strong> {error}
+            </div>
+            <button className="btn" onClick={handleSubmit} style={{ padding: '8px 16px', background: 'rgba(244, 63, 94, 0.2)', borderRadius: '8px', color: COLORS.accentRed, fontWeight: 'bold', border: 'none' }}>Try Again</button>
           </div>
         )}
       </section>
@@ -861,7 +927,7 @@ function Roastd() {
           </h3>
           <div style={{ display: 'flex', gap: '24px', overflowX: 'auto', paddingBottom: '32px', paddingLeft: '8px', scrollSnapType: 'x mandatory' }}>
             {recentRoasts.map((r, idx) => (
-              <div key={idx} className="framer-card" style={{ minWidth: '300px', width: '300px', borderRadius: '20px', padding: '28px', scrollSnapAlign: 'start', flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
+              <div key={idx} className="framer-card" style={{ minWidth: isMobile ? '260px' : '300px', width: isMobile ? '260px' : '300px', borderRadius: '20px', padding: isMobile ? '20px' : '28px', scrollSnapAlign: 'start', flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                   <span style={{ fontSize: '11px', fontWeight: '700', color: COLORS.textSecondary, textTransform: 'uppercase', letterSpacing: '1.5px' }}>{r.category}</span>
                   <span style={{ fontSize: '13px', fontWeight: '800', color: COLORS.accentRed, backgroundColor: COLORS.accentRedSoft, padding: '4px 10px', borderRadius: '6px' }}>{r.heat_score}/10</span>
@@ -877,21 +943,26 @@ function Roastd() {
 
       {/* RESULTS SECTION */}
       {result && (
-        <section ref={resultsRef} aria-live="polite" style={{ paddingTop: '20px' }}>
+        <section ref={resultsRef} aria-live="polite" style={{ paddingTop: '20px', opacity: isFadingOut ? 0 : 1, transition: 'opacity 0.3s ease' }}>
 
           {/* Quote + Heat Score card */}
-          <div className="stagger-1 framer-card" style={{ borderRadius: '28px', padding: isMobile ? '36px 24px' : '56px 48px', marginBottom: '32px', position: 'relative', overflow: 'hidden' }}>
+          <div className="stagger-1 framer-card" style={{ borderRadius: '28px', padding: isMobile ? '28px 20px' : '56px 48px', marginBottom: '32px', position: 'relative', overflow: 'hidden' }}>
             <div style={{ position: 'absolute', top: 0, left: 0, width: '6px', height: '100%', backgroundColor: COLORS.accentRed }} />
             {result.improvement_score && (
-              <div style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '12px 16px', borderRadius: '12px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: COLORS.success, fontWeight: '700', fontSize: '14px' }}>Improvement from last time:</span>
-                <span style={{ color: COLORS.success, fontWeight: '900', fontSize: '16px' }}>{result.improvement_score}/10</span>
-              </div>
+              (() => {
+                const impColor = result.improvement_score >= 7 ? COLORS.success : result.improvement_score >= 4 ? COLORS.accentYellow : COLORS.error;
+                return (
+                  <div style={{ backgroundColor: `${impColor}1A`, border: `1px solid ${impColor}4D`, padding: '12px 16px', borderRadius: '12px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: impColor, fontWeight: '700', fontSize: '14px' }}>Improvement from last time:</span>
+                    <span style={{ color: impColor, fontWeight: '900', fontSize: '18px' }}>{result.improvement_score}/10</span>
+                  </div>
+                );
+              })()
             )}
             <h2 style={{ margin: '0 0 24px 0', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '2px', color: COLORS.textSecondary, fontWeight: '700' }}>
               The Verdict
             </h2>
-            <p style={{ margin: 0, fontSize: isMobile ? '24px' : '32px', fontStyle: 'italic', fontWeight: '600', lineHeight: '1.4', color: COLORS.textPrimary, letterSpacing: '-0.02em' }}>
+            <p style={{ margin: 0, fontSize: isMobile ? '22px' : '32px', fontStyle: 'italic', fontWeight: '600', lineHeight: '1.4', color: COLORS.textPrimary, letterSpacing: '-0.02em' }}>
               "<TypewriterText text={result.roast_quote} />"
             </p>
 
@@ -920,7 +991,7 @@ function Roastd() {
             {result.multi_perspective.map((p, idx) => {
               const color = getBorderColorForIndex(idx);
               return (
-                <div key={idx} className="framer-card" style={{ borderRadius: '24px', padding: isMobile ? '28px 20px' : '40px', borderTop: `3px solid ${color}` }}>
+                <div key={idx} className="framer-card" style={{ borderRadius: isMobile ? '16px' : '24px', padding: isMobile ? '24px' : '40px', borderTop: `3px solid ${color}` }}>
                   <h4 style={{ margin: '0 0 16px 0', color, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1.5px', fontWeight: '800' }}>{p.title}</h4>
                   <p style={{ margin: 0, lineHeight: '1.7', fontSize: isMobile ? '15px' : '16px', color: COLORS.textSecondary }}>{p.content}</p>
                 </div>
@@ -932,7 +1003,7 @@ function Roastd() {
 
           {/* Strengths */}
           {(result.strengths && result.strengths.length > 0) && (
-            <div className="stagger-2 framer-card" style={{ borderRadius: '28px', padding: isMobile ? '32px 20px' : '48px', marginBottom: '32px', backgroundColor: 'rgba(16, 185, 129, 0.05)', borderLeft: `4px solid ${COLORS.success}` }}>
+            <div className="stagger-2 framer-card" style={{ borderRadius: '28px', padding: isMobile ? '28px 20px' : '48px', marginBottom: '32px', backgroundColor: 'rgba(16, 185, 129, 0.05)', borderLeft: `4px solid ${COLORS.success}` }}>
               <h3 style={{ fontSize: '22px', fontWeight: '800', margin: '0 0 32px 0', display: 'flex', alignItems: 'center', gap: '12px', color: COLORS.success }}>
                 <span style={{ display: 'inline-block', width: '12px', height: '12px', borderRadius: '3px', backgroundColor: COLORS.success, flexShrink: 0 }} />
                 What You Did Right
@@ -951,7 +1022,7 @@ function Roastd() {
           <div style={DIVIDER} />
 
           {/* Tips */}
-          <div className="stagger-3 framer-card" style={{ borderRadius: '28px', padding: isMobile ? '32px 20px' : '48px', marginBottom: '32px' }}>
+          <div className="stagger-3 framer-card" style={{ borderRadius: '28px', padding: isMobile ? '28px 20px' : '48px', marginBottom: '32px' }}>
             <h3 style={{ fontSize: '22px', fontWeight: '800', margin: '0 0 32px 0', display: 'flex', alignItems: 'center', gap: '12px' }}>
               <span style={{ display: 'inline-block', width: '12px', height: '12px', borderRadius: '3px', backgroundColor: COLORS.accentYellow, flexShrink: 0 }} />
               Actionable Fixes
@@ -961,7 +1032,7 @@ function Roastd() {
                 <div
                   key={idx}
                   className="tip-item"
-                  style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', animationDelay: `${idx * 0.08}s` }}
+                  style={{ display: 'flex', gap: isMobile ? '16px' : '20px', alignItems: 'flex-start', animationDelay: `${idx * 0.08}s` }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '50%', backgroundColor: `${COLORS.accentYellow}15`, color: COLORS.accentYellow, fontSize: '14px', fontWeight: '800', flexShrink: 0 }}>{idx + 1}</div>
                   <p style={{ margin: 0, fontSize: isMobile ? '15px' : '17px', lineHeight: '1.6', color: COLORS.textPrimary }}>{t}</p>
@@ -1067,6 +1138,7 @@ function Roastd() {
                 borderRadius: '16px',
                 fontSize: '15px',
                 fontWeight: '800',
+                gridColumn: isMobile ? 'span 2' : 'auto'
               }}
               onClick={reset}
             >
