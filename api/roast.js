@@ -288,7 +288,15 @@ export default async function handler(req) {
 
         if (!res.ok) {
           const errText = await res.text();
-          throw new Error(`Google API Error: ${res.status} ${errText}`);
+          let errMsg = errText;
+          try {
+            const errJson = JSON.parse(errText);
+            if (errJson.error && errJson.error.message) errMsg = errJson.error.message;
+          } catch (_) {}
+          if (res.status === 503) {
+            throw new Error("The AI is currently experiencing high demand. Please wait a moment and try again.");
+          }
+          throw new Error(`Google API Error ${res.status}: ${errMsg}`);
         }
 
         const json = await res.json();
@@ -318,7 +326,10 @@ export default async function handler(req) {
       } catch (e) {
         lastError = e.message;
         retryCount++;
-        if (retryCount >= 2) {
+        if (retryCount < 2) {
+          // Add a 1.5-second delay before retrying to let the API recover from the spike
+          await new Promise(resolve => setTimeout(resolve, 1500));
+        } else {
           return jsonResponse({ error: lastError }, 502);
         }
       }
