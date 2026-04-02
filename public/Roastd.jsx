@@ -61,7 +61,7 @@ const loadScript = (src) => {
   });
 };
 
-
+// --- Custom hook ---
 function wordsFrom(s) {
   const cleaned = (s || '').toLowerCase().trim().replace(/[^\w\s]/g, ' ');
   return cleaned.split(' ').map(w => w.trim()).filter(Boolean);
@@ -94,9 +94,6 @@ function similarityRatio(a, b) {
   const max = Math.max(s.length, t.length);
   if(max===0) return 1; return 1 - (levenshteinDistance(s,t)/max);
 }
-
-// --- Custom hook ---
-
 function useWindowWidth() {
   const [width, setWidth] = useState(window.innerWidth);
   useEffect(() => {
@@ -173,16 +170,13 @@ function Roastd() {
 
   const [recentRoasts, setRecentRoasts] = useState([]);
   const [sharedRoast, setSharedRoast] = useState(null);
-
   const [copied, setCopied] = useState(false);
   const [lastRewrite, setLastRewrite] = useState('');
   const [lastOriginalText, setLastOriginalText] = useState('');
   const [showResubmissionInterstitial, setShowResubmissionInterstitial] = useState(false);
   const [pendingText, setPendingText] = useState('');
   const [showShareCard, setShowShareCard] = useState(false);
-  
   const wordCount = wordsFrom(text).length;
-
 
   const resultsRef = useRef(null);
 
@@ -366,27 +360,55 @@ function Roastd() {
 
   const currentCategoryObj = CATEGORIES.find(c => c.id === category) || CATEGORIES[0];
 
-    const performSubmit = useCallback(async ({ submitText, isResubmission }) => {
+  const performSubmit = useCallback(async ({ submitText, isResubmission }) => {
     if (!submitText.trim()) return;
-    setIsLoading(true); setError(null); setResult(null); setStats(null); setSharedRoast(null); setCopied(false);
+    setIsLoading(true);
+    setError(null);
+    setResult(null);
+    setStats(null);
+    setSharedRoast(null);
+    setCopied(false);
+
     try {
       const response = await fetch('/api/roast', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          text: submitText.trim(), category, targetGoal: targetGoal.trim() || 'Improve my text', intensity,
+          text: submitText.trim(),
+          category,
+          targetGoal: targetGoal.trim() || 'Improve my text',
+          intensity,
           ...(isResubmission ? { isResubmission: true, originalText: lastOriginalText || '' } : {})
         }),
       });
+
       const data = await response.json();
-      if (!response.ok) throw new Error(data.details || data.error || 'The AI choked on your text.');
+      if (!response.ok) {
+        throw new Error(data.details || data.error || 'The AI choked on your text. Try again.');
+      }
+
       setResult(data);
-      setStats({ tokens: response.headers.get('X-Tokens-Used') || 'N/A', latency: response.headers.get('X-Latency-Ms') || 'N/A' });
+      setStats({
+        tokens: response.headers.get('X-Tokens-Used') || 'N/A',
+        latency: response.headers.get('X-Latency-Ms') || 'N/A',
+        retries: response.headers.get('X-Retry-Count') || '0',
+      });
       saveToRecent(data, category, intensity);
       if (!isResubmission) setLastOriginalText(submitText.trim());
       setLastRewrite(data.rewrite || '');
-      setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
-    } catch (err) { setError(err.message); } finally { setIsLoading(false); }
+
+      setTimeout(() => {
+        if (resultsRef.current) {
+          const top = resultsRef.current.getBoundingClientRect().top + window.scrollY - 20;
+          window.scrollTo({ top, behavior: 'smooth' });
+        }
+      }, 100);
+
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
   }, [category, targetGoal, intensity, saveToRecent, lastOriginalText]);
 
   const handleSubmit = useCallback(() => {
@@ -446,7 +468,7 @@ function Roastd() {
       yPos += (splitQuote.length * 6) + 4;
 
       doc.setFont('helvetica', 'bold'); doc.text(`Heat Score: ${result.heat_score}/10`, 15, yPos); yPos += 14;
-      if (result.strengths) {
+      if (result.strengths && result.strengths.length > 0) {
         doc.setFontSize(16); doc.text('Strengths', 15, yPos); yPos += 8;
         doc.setFontSize(12); doc.setFont('helvetica', 'normal');
         result.strengths.forEach((s) => {
@@ -500,6 +522,11 @@ function Roastd() {
         new Paragraph({ children: [new TextRun({ text: `"${result.roast_quote}"`, italics: true })] }),
         new Paragraph({ children: [new TextRun({ text: `Heat Score: ${result.heat_score}/10`, bold: true })] }),
         new Paragraph({ text: "" }),
+        ...(result.strengths && result.strengths.length > 0 ? [
+          new Paragraph({ text: "Strengths", heading: HeadingLevel.HEADING_2 }),
+          ...result.strengths.map(s => new Paragraph({ text: "- " + s })),
+          new Paragraph({ text: "" }),
+        ] : []),
         new Paragraph({ text: "Perspectives", heading: HeadingLevel.HEADING_2 }),
       ];
 
@@ -579,7 +606,6 @@ function Roastd() {
         </p>
       </header>
 
-      
       {showResubmissionInterstitial && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 100, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div className="framer-card" style={{ maxWidth: '520px', width: '100%', padding: '32px', borderRadius: '24px' }}>
@@ -763,7 +789,6 @@ function Roastd() {
             onFocus={() => setTextareaFocused(true)}
             onBlur={() => setTextareaFocused(false)}
           />
-          
           {!text && !textareaFocused && (
             <p style={{ margin: '8px 0 0 4px', fontSize: '13px', color: COLORS.textMuted, lineHeight: '1.5' }}>
               Tip: The more text you paste, the better the roast.
@@ -773,8 +798,155 @@ function Roastd() {
             <p style={{ margin: '8px 0 0 4px', fontSize: '13px', color: wordCount < 30 ? COLORS.error : wordCount < 80 ? COLORS.warning : COLORS.success, lineHeight: '1.5' }}>
               Word count: {wordCount} {wordCount < 30 ? '(Too short!)' : wordCount < 80 ? '(Need more context)' : '(Good length!)'}
             </p>
-          )}}
+          )}
+        </div>
+
+        {/* Submit */}
+        <button
+          className="btn btn-submit"
+          aria-label="Submit text for roasting"
+          style={{
+            width: '100%',
+            padding: '22px',
+            backgroundColor: COLORS.accentRed,
+            color: '#fff',
+            border: 'none',
+            borderRadius: '16px',
+            fontSize: '18px',
+            fontWeight: '800',
+            letterSpacing: '1px',
+            textTransform: 'uppercase',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            animation: submitEnabled ? 'submitPulse 2.5s ease-in-out infinite' : 'none',
+          }}
+          onClick={handleSubmit}
+          disabled={isLoading || !text.trim()}
+        >
+          {isLoading ? 'Roasting in progress...' : 'Roast Me Alive'}
+        </button>
+
+        {error && (
+          <div
+            role="alert"
+            style={{ marginTop: '24px', padding: '16px 20px', backgroundColor: COLORS.accentRedSoft, border: `1px solid rgba(244, 63, 94, 0.4)`, borderRadius: '14px', color: COLORS.accentRed, fontSize: '15px', display: 'flex', alignItems: 'center', gap: '12px' }}
+          >
+            <span style={{ fontSize: '20px' }}>⚠️</span>
+            <strong>Error:</strong> {error}
           </div>
+        )}
+      </section>
+
+      {/* LOADING STATE */}
+      {isLoading && (
+        <div>
+          <div className="stagger-1" style={{ textAlign: 'center', padding: '60px 20px 40px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <div style={{ fontSize: '64px', animation: 'framerReveal 1s infinite alternate cubic-bezier(0.175, 0.885, 0.32, 1.275)' }}>🔥</div>
+            <div style={{ height: '40px', overflow: 'hidden', marginTop: '32px' }}>
+              <h3 key={loadingQuoteIdx} className="stagger-1" style={{ color: COLORS.textPrimary, fontSize: '22px', fontWeight: '600', margin: 0 }}>
+                {LOADING_QUOTES[loadingQuoteIdx]}
+              </h3>
+            </div>
+          </div>
+          <ShimmerLoading />
+        </div>
+      )}
+
+      {/* RECENT ROASTS */}
+      {!result && !isLoading && !error && recentRoasts.length > 0 && (
+        <div className="stagger-3" style={{ marginTop: '80px' }}>
+          <h3 style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1.5px', color: COLORS.textSecondary, fontWeight: '700', marginBottom: '24px', paddingLeft: '8px' }}>
+            Hall of Shame (Recent)
+          </h3>
+          <div style={{ display: 'flex', gap: '24px', overflowX: 'auto', paddingBottom: '32px', paddingLeft: '8px', scrollSnapType: 'x mandatory' }}>
+            {recentRoasts.map((r, idx) => (
+              <div key={idx} className="framer-card" style={{ minWidth: '300px', width: '300px', borderRadius: '20px', padding: '28px', scrollSnapAlign: 'start', flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: '700', color: COLORS.textSecondary, textTransform: 'uppercase', letterSpacing: '1.5px' }}>{r.category}</span>
+                  <span style={{ fontSize: '13px', fontWeight: '800', color: COLORS.accentRed, backgroundColor: COLORS.accentRedSoft, padding: '4px 10px', borderRadius: '6px' }}>{r.heat_score}/10</span>
+                </div>
+                <div style={{ fontSize: '15px', fontStyle: 'italic', color: COLORS.textPrimary, lineHeight: '1.6', flex: 1, display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                  "{r.roast_quote}"
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* RESULTS SECTION */}
+      {result && (
+        <section ref={resultsRef} aria-live="polite" style={{ paddingTop: '20px' }}>
+
+          {/* Quote + Heat Score card */}
+          <div className="stagger-1 framer-card" style={{ borderRadius: '28px', padding: isMobile ? '36px 24px' : '56px 48px', marginBottom: '32px', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, width: '6px', height: '100%', backgroundColor: COLORS.accentRed }} />
+            {result.improvement_score && (
+              <div style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '12px 16px', borderRadius: '12px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: COLORS.success, fontWeight: '700', fontSize: '14px' }}>Improvement from last time:</span>
+                <span style={{ color: COLORS.success, fontWeight: '900', fontSize: '16px' }}>{result.improvement_score}/10</span>
+              </div>
+            )}
+            <h2 style={{ margin: '0 0 24px 0', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '2px', color: COLORS.textSecondary, fontWeight: '700' }}>
+              The Verdict
+            </h2>
+            <p style={{ margin: 0, fontSize: isMobile ? '24px' : '32px', fontStyle: 'italic', fontWeight: '600', lineHeight: '1.4', color: COLORS.textPrimary, letterSpacing: '-0.02em' }}>
+              "<TypewriterText text={result.roast_quote} />"
+            </p>
+
+            <div style={{ marginTop: '48px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '16px' }}>
+                <span style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1.5px', color: COLORS.textSecondary }}>Heat Score</span>
+                <span style={{ fontSize: '40px', fontWeight: '800', color: COLORS.accentRed, lineHeight: '1', letterSpacing: '-0.04em' }}>
+                  {result.heat_score}<span style={{ fontSize: '20px', color: COLORS.textMuted }}>/10</span>
+                </span>
+              </div>
+              {/* Bar track with notch marks */}
+              <div style={{ position: 'relative', height: '8px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
+                <div className="animate-bar" style={{ height: '100%', width: `${(result.heat_score / 10) * 100}%`, backgroundColor: COLORS.accentRed, borderRadius: '4px' }} />
+                {[25, 50, 75].map(pct => (
+                  <div key={pct} style={{ position: 'absolute', top: 0, left: `${pct}%`, width: '1px', height: '100%', backgroundColor: 'rgba(255,255,255,0.12)', zIndex: 2 }} />
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div style={DIVIDER} />
+
+          {/* Perspectives */}
+          <span style={sectionLabelStyle(COLORS.textMuted)}>Perspectives</span>
+          <div className="stagger-2" style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', marginBottom: '32px' }}>
+            {result.multi_perspective.map((p, idx) => {
+              const color = getBorderColorForIndex(idx);
+              return (
+                <div key={idx} className="framer-card" style={{ borderRadius: '24px', padding: isMobile ? '28px 20px' : '40px', borderTop: `3px solid ${color}` }}>
+                  <h4 style={{ margin: '0 0 16px 0', color, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1.5px', fontWeight: '800' }}>{p.title}</h4>
+                  <p style={{ margin: 0, lineHeight: '1.7', fontSize: isMobile ? '15px' : '16px', color: COLORS.textSecondary }}>{p.content}</p>
+                </div>
+              );
+            })}
+          </div>
+
+          <div style={DIVIDER} />
+
+          {/* Strengths */}
+          {(result.strengths && result.strengths.length > 0) && (
+            <div className="stagger-2 framer-card" style={{ borderRadius: '28px', padding: isMobile ? '32px 20px' : '48px', marginBottom: '32px', backgroundColor: 'rgba(16, 185, 129, 0.05)', borderLeft: `4px solid ${COLORS.success}` }}>
+              <h3 style={{ fontSize: '22px', fontWeight: '800', margin: '0 0 32px 0', display: 'flex', alignItems: 'center', gap: '12px', color: COLORS.success }}>
+                <span style={{ display: 'inline-block', width: '12px', height: '12px', borderRadius: '3px', backgroundColor: COLORS.success, flexShrink: 0 }} />
+                What You Did Right
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                {result.strengths.map((s, idx) => (
+                  <div key={idx} style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
+                    <div style={{ color: COLORS.success, fontSize: '18px', fontWeight: '900' }}>✓</div>
+                    <p style={{ margin: 0, fontSize: isMobile ? '15px' : '17px', lineHeight: '1.6', color: COLORS.textPrimary }}>{s}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div style={DIVIDER} />
 
@@ -868,7 +1040,7 @@ function Roastd() {
             >
               Download DOCX
             </button>
-                        <button
+            <button
               className="btn framer-card"
               aria-label="Copy shareable link to clipboard"
               style={{ padding: '16px 20px', color: COLORS.accentBlue, borderColor: 'rgba(59, 130, 246, 0.3)', borderRadius: '16px', fontSize: '15px', fontWeight: '600' }}
