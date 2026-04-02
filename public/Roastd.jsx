@@ -191,6 +191,7 @@ function Roastd() {
   const [isFadingOut, setIsFadingOut] = useState(false);
   const wordCount = wordsFrom(text).length;
   const charCount = text.length;
+  const MAX_WORDS = 1500;
 
   const resultsRef = useRef(null);
   const textareaRef = useRef(null);
@@ -682,7 +683,9 @@ function Roastd() {
       
       {showShareCard && result && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 100, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }} onClick={() => setShowShareCard(false)}>
-          <div style={{ maxWidth: '600px', width: '100%', aspectRatio: '1/1', background: 'radial-gradient(circle at top left, #201010, #050505)', borderRadius: '32px', padding: '48px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', border: '1px solid rgba(255,255,255,0.1)' }} onClick={e => e.stopPropagation()}>
+          <div style={{ position: 'relative', maxWidth: '600px', width: '100%', aspectRatio: '1/1', background: 'radial-gradient(circle at top left, #201010, #050505)', borderRadius: '32px', padding: '48px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', border: '1px solid rgba(255,255,255,0.1)' }} onClick={e => e.stopPropagation()}>
+            <button onClick={() => setShowShareCard(false)} style={{ position: 'absolute', top: '24px', right: '24px', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%', width: '36px', height: '36px', color: '#fff', fontSize: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'background 0.2s' }} onMouseOver={e => e.target.style.background = 'rgba(255,255,255,0.2)'} onMouseOut={e => e.target.style.background = 'rgba(255,255,255,0.1)'}>×</button>
+            <div style={{ position: 'absolute', top: '-40px', left: '0', width: '100%', textAlign: 'center', color: COLORS.textSecondary, fontSize: '14px', fontWeight: '600', letterSpacing: '1px', textTransform: 'uppercase' }}>📸 Screenshot to share</div>
             <div style={{ fontSize: '24px', fontWeight: '900', color: COLORS.accentRed }}>Roastd 🌶️</div>
             <div style={{ fontSize: '32px', fontWeight: '800', fontStyle: 'italic', lineHeight: '1.3' }}>"{result.roast_quote}"</div>
             <div>
@@ -882,12 +885,28 @@ function Roastd() {
             </p>
           )}
           {text && (
-            <p style={{ margin: '8px 0 0 4px', fontSize: '13px', color: countColor, lineHeight: '1.5', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>
-                Word count: {wordCount} <span style={{ color: COLORS.textMuted, fontSize: '12px' }}>({charCount} characters)</span>
-              </span>
-              <span>{countMsg}</span>
-            </p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: '12px', padding: '0 4px' }}>
+              <p style={{ margin: 0, fontSize: '13px', color: countColor, lineHeight: '1.5', display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? '4px' : '12px' }}>
+                <span>
+                  Word count: <strong style={{ color: countColor === COLORS.error && wordCount > MAX_WORDS ? COLORS.error : 'inherit' }}>{wordCount}</strong> <span style={{ color: COLORS.textMuted, fontSize: '12px', fontWeight: 'normal' }}>({charCount} chars)</span>
+                </span>
+                <span>{countMsg}</span>
+              </p>
+              <button
+                className="btn"
+                aria-label="Clear text"
+                onClick={() => {
+                  setText('');
+                  if (textareaRef.current) {
+                    textareaRef.current.style.height = '180px';
+                    textareaRef.current.focus();
+                  }
+                }}
+                style={{ background: 'rgba(255,255,255,0.05)', border: `1px solid ${COLORS.border}`, color: COLORS.textSecondary, fontSize: '12px', cursor: 'pointer', padding: '6px 12px', borderRadius: '8px', whiteSpace: 'nowrap' }}
+              >
+                Clear
+              </button>
+            </div>
           )}
         </div>
 
@@ -946,11 +965,13 @@ function Roastd() {
             animation: submitEnabled ? 'submitPulse 2.5s ease-in-out infinite' : 'none',
           }}
           onClick={handleSubmit}
-          disabled={isLoading || !text.trim()}
+          disabled={!submitEnabled}
         >
           {isLoading ? 'Roasting in progress...' : 'Roast Me Alive'}
         </button>
-        <div style={{ fontSize: '12px', color: COLORS.textMuted, textAlign: 'center', marginTop: '12px' }}>Cmd+Enter (or Ctrl+Enter) to roast</div>
+        <div style={{ fontSize: '12px', color: COLORS.textMuted, textAlign: 'center', marginTop: '12px', lineHeight: '1.5' }}>
+          {!isMobile && <span>Cmd+Enter (or Ctrl+Enter) to roast &bull; </span>}Please do not paste sensitive info (SSNs, API keys, etc.)
+        </div>
 
         {error && (
           <div

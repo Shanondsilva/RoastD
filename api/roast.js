@@ -233,6 +233,10 @@ function jsonResponse(data, status = 200, extraHeaders = {}) {
 export default async function handler(req) {
   // Wrap EVERYTHING in try/catch so Vercel never returns a raw error page
   try {
+    if (!process.env.GROQ_API_KEY) {
+      return jsonResponse({ error: 'Server configuration error: Missing API Key.' }, 500);
+    }
+
     if (req.method !== 'POST') {
       return jsonResponse({ error: 'Method Not Allowed' }, 405);
     }
@@ -265,8 +269,17 @@ export default async function handler(req) {
       return jsonResponse({ error: 'Invalid intensity' }, 400);
     }
 
+    // Security: Prevent massive payloads from burning through Groq token limits (roughly 1500 words)
+    if (text.length > 15000) {
+      return jsonResponse({ error: 'Text payload is too large. Please keep it under 1,500 words.' }, 400);
+    }
+
     const systemPrompt = buildSystemPrompt(category, targetGoal, intensity, !!isResubmission);
     const startMs = Date.now();
+
+    // Add a 25-second abort controller so we gracefully handle timeouts before Vercel kills the function at 30s
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 25000);
 
     try {
       const userContent = isResubmission
@@ -287,8 +300,11 @@ export default async function handler(req) {
           ],
           response_format: { type: 'json_object' },
           max_tokens: 4096
-        })
+        },
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -314,6 +330,9 @@ export default async function handler(req) {
         'X-Latency-Ms': latencyMs.toString(),
       });
     } catch (e) {
+      if (e.name === 'AbortError') {
+        return jsonResponse({ error: 'The AI took too long to respond. Please wait a moment and try again.' }, 504);
+      }
       return jsonResponse({ error: 'Groq API Error: ' + e.message }, 502);
     }
 
