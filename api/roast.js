@@ -300,7 +300,7 @@ export default async function handler(req) {
           ],
           response_format: { type: 'json_object' },
           max_tokens: 4096
-        },
+        }),
         signal: controller.signal
       });
 
