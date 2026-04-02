@@ -20,16 +20,26 @@ const COLORS = {
 };
 
 const CATEGORIES = [
-  { id: 'Startup Pitch', placeholder: 'e.g. Raise a seed round from top VCs', textareaPlaceholder: 'Paste your pitch deck text, investor email, or one-pager here...' },
-  { id: 'CV / Resume', placeholder: 'e.g. Get hired as a senior developer', textareaPlaceholder: 'Paste your CV, resume, or cover letter text here...' },
-  { id: 'Dating Profile', placeholder: 'e.g. Get more meaningful matches', textareaPlaceholder: 'Paste your dating profile bio, prompts, or about me section here...' },
-  { id: 'Bio / About Me', placeholder: 'e.g. Build a memorable personal brand', textareaPlaceholder: 'Paste your bio, about page, LinkedIn summary, or speaker intro here...' },
+  { id: 'CV / Resume', label: 'CV / Resume', apiId: 'CV / Resume', placeholder: 'e.g. Get hired as a senior developer', textareaPlaceholder: 'Paste your CV, resume, or cover letter text here...' },
+  { id: 'Business Idea', label: 'Business Idea', apiId: 'Startup Pitch', placeholder: 'e.g. Raise a seed round from top VCs', textareaPlaceholder: 'Paste your pitch deck text, investor email, or one-pager here...' },
+  { id: 'Bio / About Me', label: 'Bio / About Me', apiId: 'Bio / About Me', placeholder: 'e.g. Build a memorable personal brand', textareaPlaceholder: 'Paste your bio, about page, LinkedIn summary, or speaker intro here...' },
+  { id: 'Dating Profile', label: 'Dating Profile', apiId: 'Dating Profile', placeholder: 'e.g. Get more meaningful matches', textareaPlaceholder: 'Paste your dating profile bio, prompts, or about me section here...' },
+  { id: 'Product / Portfolio', label: 'Product / Portfolio', apiId: 'Bio / About Me', placeholder: 'e.g. Showcase your work effectively', textareaPlaceholder: 'Paste your product description, case study, or portfolio bio here...' },
 ];
 
 const INTENSITIES = [
   { id: 'gentle', label: 'Gentle Nudge', color: COLORS.accentBlue },
   { id: 'hard', label: 'Hard Truth', color: COLORS.accentYellow },
   { id: 'full', label: 'Full Roast', color: COLORS.accentRed },
+];
+
+const PERSONAS = [
+  'Angry Professor',
+  'Corporate HR',
+  'Best Friend',
+  'Simon Cowell',
+  'Startup Bro',
+  'Disappointed Parent',
 ];
 
 const LOADING_QUOTES = [
@@ -158,6 +168,7 @@ function Roastd() {
   const [category, setCategory] = useState(CATEGORIES[0].id);
   const [targetGoal, setTargetGoal] = useState('');
   const [intensity, setIntensity] = useState('hard');
+  const [persona, setPersona] = useState(null);
   const [text, setText] = useState('');
   const [textareaFocused, setTextareaFocused] = useState(false);
 
@@ -386,8 +397,8 @@ function Roastd() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           text: submitText.trim(),
-          category,
-          targetGoal: targetGoal.trim() || 'Improve my text',
+          category: CATEGORIES.find(c => c.id === category)?.apiId || category,
+          targetGoal: (targetGoal.trim() || 'Improve my text') + (persona ? `. Roast in the style of: ${persona}` : ''),
           intensity,
           ...(isResubmission ? { isResubmission: true, originalText: lastOriginalText || '' } : {})
         }),
@@ -420,7 +431,7 @@ function Roastd() {
     } finally {
       setIsLoading(false);
     }
-  }, [category, targetGoal, intensity, saveToRecent, lastOriginalText]);
+  }, [category, targetGoal, intensity, persona, saveToRecent, lastOriginalText]);
 
   const handleTextChange = useCallback((e) => {
     setText(e.target.value);
@@ -729,42 +740,59 @@ function Roastd() {
         className="stagger-2 framer-card"
         style={{ display: result ? 'none' : 'block', borderRadius: isMobile ? '20px' : '28px', padding: isMobile ? '24px' : '48px', marginBottom: '40px' }}
       >
-        {/* Category + Goal */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(250px, 1fr))',
-          gap: '24px',
-          marginBottom: '36px',
-        }}>
-          <div>
-            <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: COLORS.textSecondary, textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '12px' }}>
-              1. Document Type
-            </label>
-            <select
-              className="premium-input"
-              aria-label="Select document type"
-              style={{ width: '100%', backgroundColor: COLORS.bgInput, border: `1px solid ${COLORS.border}`, color: COLORS.textPrimary, padding: '16px', borderRadius: '14px', fontSize: '16px', appearance: 'none', cursor: 'pointer' }}
-              value={category}
-              onChange={e => setCategory(e.target.value)}
-            >
-              {CATEGORIES.map(c => (
-                <option key={c.id} value={c.id} style={{ backgroundColor: '#0f0f14', color: '#ffffff' }}>{c.id}</option>
-              ))}
-            </select>
+        {/* Document Type - Cards */}
+        <div style={{ marginBottom: '28px' }}>
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: COLORS.textSecondary, textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '12px' }}>
+            1. Document Type
+          </label>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+            {CATEGORIES.map(c => {
+              const isActive = category === c.id;
+              return (
+                <button
+                  key={c.id}
+                  className="btn"
+                  aria-label={`Select document type: ${c.label}`}
+                  aria-pressed={isActive}
+                  onClick={() => setCategory(c.id)}
+                  style={{
+                    padding: '12px 18px',
+                    borderRadius: '12px',
+                    border: `1px solid ${isActive ? COLORS.accentRed : COLORS.border}`,
+                    backgroundColor: isActive ? COLORS.accentRedSoft : COLORS.bgInput,
+                    color: isActive ? COLORS.accentRed : COLORS.textSecondary,
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {isActive && (
+                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: COLORS.accentRed, boxShadow: `0 0 8px ${COLORS.accentRed}`, flexShrink: 0 }} />
+                  )}
+                  {c.label}
+                </button>
+              );
+            })}
           </div>
-          <div>
-            <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: COLORS.textSecondary, textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '12px' }}>
-              2. Target Goal (Optional)
-            </label>
-            <input
-              className="premium-input"
-              type="text"
-              style={{ width: '100%', backgroundColor: COLORS.bgInput, border: `1px solid ${COLORS.border}`, color: COLORS.textPrimary, padding: '16px', borderRadius: '14px', fontSize: '16px' }}
-              placeholder={currentCategoryObj.placeholder}
-              value={targetGoal}
-              onChange={e => setTargetGoal(e.target.value)}
-            />
-          </div>
+        </div>
+
+        {/* Target Goal */}
+        <div style={{ marginBottom: '36px' }}>
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: COLORS.textSecondary, textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '12px' }}>
+            2. Target Goal (Optional)
+          </label>
+          <input
+            className="premium-input"
+            type="text"
+            style={{ width: '100%', backgroundColor: COLORS.bgInput, border: `1px solid ${COLORS.border}`, color: COLORS.textPrimary, padding: '16px', borderRadius: '14px', fontSize: '16px' }}
+            placeholder={currentCategoryObj.placeholder}
+            value={targetGoal}
+            onChange={e => setTargetGoal(e.target.value)}
+          />
         </div>
 
         {/* Intensity */}
@@ -861,6 +889,40 @@ function Roastd() {
               <span>{countMsg}</span>
             </p>
           )}
+        </div>
+
+        {/* Persona */}
+        <div style={{ marginBottom: '40px' }}>
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: COLORS.textSecondary, textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '12px' }}>
+            5. Roast Persona <span style={{ color: COLORS.textMuted, fontWeight: '400', textTransform: 'none', letterSpacing: '0', fontSize: '12px' }}>(optional)</span>
+          </label>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+            {PERSONAS.map(p => {
+              const isActive = persona === p;
+              return (
+                <button
+                  key={p}
+                  className="btn"
+                  aria-label={`Set persona to ${p}`}
+                  aria-pressed={isActive}
+                  onClick={() => setPersona(isActive ? null : p)}
+                  style={{
+                    padding: '10px 16px',
+                    borderRadius: '20px',
+                    border: `1px solid ${isActive ? COLORS.accentYellow : COLORS.border}`,
+                    backgroundColor: isActive ? `${COLORS.accentYellow}15` : COLORS.bgInput,
+                    color: isActive ? COLORS.accentYellow : COLORS.textSecondary,
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    transition: 'all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {p}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Submit */}
@@ -1151,7 +1213,7 @@ function Roastd() {
       {/* FOOTER */}
       <footer style={{ textAlign: 'center', marginTop: '80px', paddingBottom: '48px' }}>
         <p style={{ fontSize: '12px', color: COLORS.textMuted, margin: 0, lineHeight: '1.6' }}>
-          Built with Gemini 2.5 Flash. Roasted with love.
+          Built with Claude. Roasted with love.
         </p>
       </footer>
 
