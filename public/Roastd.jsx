@@ -95,9 +95,9 @@ function similarityRatio(a, b) {
   if(max===0) return 1; return 1 - (levenshteinDistance(s,t)/max);
 }
 function useWindowWidth() {
-  const [width, setWidth] = useState(window.innerWidth);
+  const [width, setWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 800);
   useEffect(() => {
-    const handler = () => setWidth(window.innerWidth);
+    const handler = () => setWidth(window?.innerWidth || 800);
     window.addEventListener('resize', handler);
     return () => window.removeEventListener('resize', handler);
   }, []);
@@ -190,7 +190,7 @@ function Roastd() {
       if (saved) setRecentRoasts(JSON.parse(saved));
     } catch (e) { console.error('Could not load recent roasts', e); }
 
-    if (window.location.hash) {
+    if (typeof window !== 'undefined' && window.location.hash) {
       try {
         const hashData = window.location.hash.substring(1);
         const decoded = JSON.parse(atob(decodeURIComponent(hashData)));
@@ -470,7 +470,7 @@ function Roastd() {
       intensity: INTENSITIES.find(i => i.id === intensity)?.label || intensity
     };
     const b64 = encodeURIComponent(btoa(JSON.stringify(shareObj)));
-    const url = window.location.origin + window.location.pathname + '#' + b64;
+    const url = typeof window !== 'undefined' ? window.location.origin + window.location.pathname + '#' + b64 : '';
     navigator.clipboard.writeText(url).then(() => {
       alert('Share link copied to clipboard!');
     }).catch(e => { console.error('Failed to copy link.', e); });
