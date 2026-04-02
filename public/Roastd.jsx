@@ -1213,7 +1213,7 @@ function Roastd() {
       {/* FOOTER */}
       <footer style={{ textAlign: 'center', marginTop: '80px', paddingBottom: '48px' }}>
         <p style={{ fontSize: '12px', color: COLORS.textMuted, margin: 0, lineHeight: '1.6' }}>
-          Built with Claude. Roasted with love.
+          Roasted with love.
         </p>
       </footer>
 
